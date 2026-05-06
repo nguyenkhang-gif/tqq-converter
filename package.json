@@ -5,10 +5,12 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "scrape": "node scrape.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
-    "epub-gen": "^0.1.0"
+    "epub-gen": "^0.1.0",
+    "puppeteer": "^24.0.0"
   }
 }
