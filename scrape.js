@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import fs from 'fs';
+import readline from 'readline';
 
 const URLS = [
   'https://www.wattpad.com/1173022060-gimai-seikatsu-vol-4-ch%C6%B0%C6%A1ng-1-ng%C3%A0y-3-th%C3%A1ng-9-th%E1%BB%A9',
@@ -12,6 +13,11 @@ const OUTPUT_FILE = 'data.html';
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
+}
+
+function ask(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => rl.question(question, ans => { rl.close(); resolve(ans.trim().toLowerCase()); }));
 }
 
 async function scrollUntilEnd(page) {
@@ -30,8 +36,15 @@ async function scrollUntilEnd(page) {
 }
 
 (async () => {
-  // Xóa file cũ trước khi bắt đầu
-  if (fs.existsSync(OUTPUT_FILE)) fs.unlinkSync(OUTPUT_FILE);
+  if (fs.existsSync(OUTPUT_FILE)) {
+    const ans = await ask(`⚠️  "${OUTPUT_FILE}" đã tồn tại. Xóa và scrape lại từ đầu? (y/n): `);
+    if (ans === 'y') {
+      fs.unlinkSync(OUTPUT_FILE);
+      console.log(`🗑️  Đã xóa ${OUTPUT_FILE}`);
+    } else {
+      console.log(`📝 Giữ file cũ, append thêm vào cuối.`);
+    }
+  }
 
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
