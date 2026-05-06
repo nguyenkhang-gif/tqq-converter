@@ -1,7 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import https from 'https';
-import http from 'http';
 import readline from 'readline';
 import * as cheerio from 'cheerio';
 import Epub from 'epub-gen';
@@ -10,23 +8,14 @@ const inputFile = 'data.html';
 const epubTitle = 'Gimai Seikatsu Vol 4';
 const epubAuthor = 'DuyAnhBi4';
 
-function downloadImage(url, dest) {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    const client = url.startsWith('https') ? https : http;
-    client.get(url, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        file.close();
-        fs.unlink(dest, () => {});
-        return downloadImage(res.headers.location, dest).then(resolve).catch(reject);
-      }
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-    }).on('error', (err) => {
-      fs.unlink(dest, () => {});
-      reject(err);
-    });
-  });
+const LOCAL_COVER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+function findLocalCover() {
+  for (const ext of LOCAL_COVER_EXTENSIONS) {
+    const p = `./cover${ext}`;
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
 }
 
 const rl = readline.createInterface({
@@ -46,19 +35,12 @@ try {
 
   const $ = cheerio.load(html);
 
-  // Lấy ảnh bìa từ .story-info img.cover
-  let coverPath = null;
-  const coverUrl = $('.story-info img.cover').attr('src');
-  if (coverUrl) {
-    const ext = path.extname(coverUrl.split('?')[0]) || '.jpg';
-    coverPath = `./cover${ext}`;
-    try {
-      await downloadImage(coverUrl, coverPath);
-      console.log(`🖼️  Đã tải ảnh bìa: ${coverPath}`);
-    } catch (e) {
-      console.warn('⚠️  Không tải được ảnh bìa:', e.message);
-      coverPath = null;
-    }
+  // Ưu tiên file local cover.jpg/png/... nếu có
+  const coverPath = findLocalCover();
+  if (coverPath) {
+    console.log(`🖼️  Dùng ảnh bìa local: ${coverPath}`);
+  } else {
+    console.log('⚠️  Không tìm thấy ảnh bìa local (cover.jpg / cover.png / ...)');
   }
 
   const chapters = [];
