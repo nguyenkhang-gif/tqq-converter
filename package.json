@@ -1,0 +1,14 @@
+{
+  "name": "wattpad-to-epub-converter",
+  "version": "1.0.1",
+  "description": "Parse Wattpad HTML and generate a clean EPUB file",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "epub-gen": "^0.1.0"
+  }
+}
