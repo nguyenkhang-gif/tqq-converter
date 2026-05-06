@@ -1,4 +1,7 @@
 import fs from 'fs';
+import path from 'path';
+import https from 'https';
+import http from 'http';
 import readline from 'readline';
 import * as cheerio from 'cheerio';
 import Epub from 'epub-gen';
@@ -7,18 +10,57 @@ const inputFile = 'data.html';
 const epubTitle = 'Gimai Seikatsu Vol 4';
 const epubAuthor = 'DuyAnhBi4';
 
+function downloadImage(url, dest) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(dest);
+    const client = url.startsWith('https') ? https : http;
+    client.get(url, (res) => {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        file.close();
+        fs.unlink(dest, () => {});
+        return downloadImage(res.headers.location, dest).then(resolve).catch(reject);
+      }
+      res.pipe(file);
+      file.on('finish', () => file.close(resolve));
+    }).on('error', (err) => {
+      fs.unlink(dest, () => {});
+      reject(err);
+    });
+  });
+}
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-fs.readFile(inputFile, 'utf8', async (err, html) => {
-  if (err) {
-    console.error("❌ Lỗi khi đọc file:", err);
-    return;
-  }
+let html;
+try {
+  html = fs.readFileSync(inputFile, 'utf8');
+} catch (err) {
+  console.error("❌ Lỗi khi đọc file:", err);
+  process.exit(1);
+}
+
+(async () => {
 
   const $ = cheerio.load(html);
+
+  // Lấy ảnh bìa từ .story-info img.cover
+  let coverPath = null;
+  const coverUrl = $('.story-info img.cover').attr('src');
+  if (coverUrl) {
+    const ext = path.extname(coverUrl.split('?')[0]) || '.jpg';
+    coverPath = `./cover${ext}`;
+    try {
+      await downloadImage(coverUrl, coverPath);
+      console.log(`🖼️  Đã tải ảnh bìa: ${coverPath}`);
+    } catch (e) {
+      console.warn('⚠️  Không tải được ảnh bìa:', e.message);
+      coverPath = null;
+    }
+  }
+
   const chapters = [];
 
   // Mỗi <article> là một chương
@@ -65,6 +107,7 @@ fs.readFile(inputFile, 'utf8', async (err, html) => {
       const option = {
         title: epubTitle,
         author: epubAuthor,
+        cover: coverPath || undefined,
         content: chapters
       };
 
@@ -80,4 +123,4 @@ fs.readFile(inputFile, 'utf8', async (err, html) => {
 
     rl.close();
   });
-});
+})();
