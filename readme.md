@@ -39,9 +39,10 @@ npm run scrape
 ```
 
 Script sẽ:
-1. Mở Chrome, lần lượt mở từng link
-2. Scroll từng bước 800px — delay 1 giây mỗi lần — dừng khi chạm thẻ điều hướng hoặc hết trang
-3. Lấy `<article class="story-part">` và **ghi vào `data.html` ngay** trước khi chuyển chương
+1. Nếu `data.html` đã tồn tại — hỏi xóa hay giữ (append thêm vào cuối)
+2. Mở Chrome, lần lượt mở từng link
+3. Scroll từng bước 800px — delay 1 giây mỗi lần — dừng khi chạm thẻ điều hướng hoặc hết trang
+4. Lấy `<article class="story-part">` và **ghi vào `data.html` ngay** trước khi chuyển chương
 
 > Nếu bị ngắt giữa chừng, các chương đã scrape vẫn được giữ trong `data.html`.
 
