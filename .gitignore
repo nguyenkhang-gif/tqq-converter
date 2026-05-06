@@ -2,3 +2,7 @@ node_modules/
 *.epub
 data.html
 epub-images/
+cover.jpg
+cover.jpeg
+cover.png
+cover.webp
