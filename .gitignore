@@ -4,4 +4,5 @@ output/
 manga.epub
 chapters.json
 data.html
+config.json
 package-lock.json
