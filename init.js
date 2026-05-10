@@ -26,6 +26,12 @@ const defaultConfig = {
     buildDir: '.epub-build',
     sections: null,
   },
+  compress: {
+    quality: 80,
+    maxWidth: null,
+    concurrency: 4,
+    outputDir: 'output-compress',
+  },
 };
 
 const dirs = ['output'];
