@@ -5,8 +5,11 @@
   "main": "index.js",
   "scripts": {
     "init": "node init.js",
-    "start": "node run.js",
-    "compress": "node compressImg.js"
+    "scrape": "node scrape.js",
+    "epub": "node toEpub.js",
+    "chapters": "node getChapters.js",
+    "compress": "node compressImg.js",
+    "start": "node run.js"
   },
   "keywords": [],
   "author": "",
