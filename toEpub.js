@@ -16,7 +16,7 @@ function uid() {
   return `urn:uuid:${Math.random().toString(36).slice(2)}-manga`;
 }
 
-function buildEpub(chapters, epubName) {
+function buildEpub(chapters, epubName, title = MANGA_TITLE) {
   const pages = [];
   for (let ci = 0; ci < chapters.length; ci++) {
     const chapterId = chapters[ci];
@@ -28,7 +28,7 @@ function buildEpub(chapters, epubName) {
     }
   }
 
-  console.log(`📚 ${chapters.length} chapters, ${pages.length} pages → ${epubName}`);
+  console.log(`📚 [${title}] ${chapters.length} chapters, ${pages.length} pages → ${epubName}`);
 
   if (fs.existsSync(BUILD_DIR)) fs.rmSync(BUILD_DIR, { recursive: true });
   fs.mkdirSync(path.join(BUILD_DIR, 'META-INF'), { recursive: true });
@@ -85,7 +85,7 @@ function buildEpub(chapters, epubName) {
     `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookId" version="2.0">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:title>${MANGA_TITLE}</dc:title>
+    <dc:title>${title}</dc:title>
     <dc:creator>${MANGA_AUTHOR}</dc:creator>
     <dc:language>${LANG}</dc:language>
     <dc:identifier id="bookId">${bookId}</dc:identifier>
@@ -108,7 +108,7 @@ ${spineItems.join('\n')}
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
   <head><meta name="dtb:uid" content="${bookId}"/></head>
-  <docTitle><text>${MANGA_TITLE}</text></docTitle>
+  <docTitle><text>${title}</text></docTitle>
   <navMap>
 ${navPoints}
   </navMap>
@@ -143,7 +143,8 @@ export function toEpub() {
         console.warn(`⚠️  Section "${sec.name}" has no chapters (from ${sec.from} to ${sec.to}), skipping.`);
         continue;
       }
-      buildEpub(slice, sec.name);
+      const secTitle = sec.title ?? path.basename(sec.name, '.epub');
+      buildEpub(slice, sec.name, secTitle);
     }
   } else {
     buildEpub(allChapters, EPUB_NAME);
