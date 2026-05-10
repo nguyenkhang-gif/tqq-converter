@@ -5,8 +5,9 @@ import https from 'https';
 import http from 'http';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-const { urls: _URLS, limit, outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL, waitAfterLoad, waitAfterScroll, waitBetweenChapters, headless = true, imgSelector = '.page-chapter img' } = cfg.scrape;
-const URLS = limit ? _URLS.slice(0, limit) : _URLS;
+const { urls: _URLS, from = 1, limit, outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL, waitAfterLoad, waitAfterScroll, waitBetweenChapters, headless = true, imgSelector = '.page-chapter img' } = cfg.scrape;
+const start = Math.max(0, from - 1);
+const URLS = _URLS.slice(start, limit ? start + limit : undefined);
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));

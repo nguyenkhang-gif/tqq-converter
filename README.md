@@ -37,7 +37,8 @@ All settings are in `config.json`, no code changes needed.
     "outputDir": "output",       // Directory to save images
     "referer": "https://...",    // Referer header when downloading images
     "headless": true,            // true = run in background, false = show browser
-    "limit": null,               // Max chapters to process (null = all)
+    "from": 1,                   // Start from this chapter (1-indexed, default 1)
+    "limit": null,               // Max chapters to download from "from" (null = all)
     "imgSelector": ".page-chapter img", // CSS selector for images in chapter page
     "scroll": {
       "distance": 400,           // Pixels per scroll step
@@ -52,8 +53,13 @@ All settings are in `config.json`, no code changes needed.
     ]
   },
   "epub": {
-    "outputFile": "manga.epub",  // Output EPUB filename
-    "buildDir": ".epub-build"    // Temp directory (auto-deleted after build)
+    "outputFile": "manga.epub",  // Output EPUB filename (used when sections is null)
+    "buildDir": ".epub-build",   // Temp directory (auto-deleted after build)
+    "sections": null             // null = one EPUB, or array to split into volumes:
+    // "sections": [
+    //   { "name": "vol-1.epub", "from": 1,  "to": 50  },
+    //   { "name": "vol-2.epub", "from": 51, "to": 100 }
+    // ]
   }
 }
 ```
@@ -115,6 +121,9 @@ node toEpub.js
 | Need | How |
 |---|---|
 | Run in background without browser window | Set `"headless": true` in config |
-| Only process first N chapters | Set `"limit": N` in config |
+| Start from chapter N | Set `"from": N` in `scrape` config |
+| Download chapters N to M | Set `"from": N, "limit": M-N+1` in `scrape` config |
+| Only process first N chapters | Set `"limit": N` in `scrape` config |
+| Split into multiple EPUB volumes | Set `"sections"` array in `epub` config |
 | Switch to a different website | Update `indexUrl`, `referer`, `imgSelector` in config |
 | Browser keeps stealing focus | Set `"headless": true` |

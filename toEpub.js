@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { title: MANGA_TITLE, author: MANGA_AUTHOR, language: LANG } = cfg.manga;
 const { outputDir: INPUT_DIR, limit } = cfg.scrape;
-const { outputFile: EPUB_NAME, buildDir: BUILD_DIR } = cfg.epub;
+const { outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections } = cfg.epub;
 
 function mime(ext) {
   return ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
@@ -15,17 +15,7 @@ function uid() {
   return `urn:uuid:${Math.random().toString(36).slice(2)}-manga`;
 }
 
-export function toEpub() {
-  let chapters = fs.readdirSync(INPUT_DIR)
-    .filter(d => fs.statSync(path.join(INPUT_DIR, d)).isDirectory())
-    .sort();
-  if (limit) chapters = chapters.slice(0, limit);
-
-  if (chapters.length === 0) {
-    console.error(`❌ No chapters found in ./${INPUT_DIR}/`);
-    process.exit(1);
-  }
-
+function buildEpub(chapters, epubName) {
   const pages = [];
   for (let ci = 0; ci < chapters.length; ci++) {
     const chapterId = chapters[ci];
@@ -37,7 +27,7 @@ export function toEpub() {
     }
   }
 
-  console.log(`📚 ${chapters.length} chapters, ${pages.length} pages`);
+  console.log(`📚 ${chapters.length} chapters, ${pages.length} pages → ${epubName}`);
 
   if (fs.existsSync(BUILD_DIR)) fs.rmSync(BUILD_DIR, { recursive: true });
   fs.mkdirSync(path.join(BUILD_DIR, 'META-INF'), { recursive: true });
@@ -123,13 +113,40 @@ ${navPoints}
   </navMap>
 </ncx>`);
 
-  if (fs.existsSync(EPUB_NAME)) fs.unlinkSync(EPUB_NAME);
+  if (fs.existsSync(epubName)) fs.unlinkSync(epubName);
   console.log('📦 Packaging EPUB...');
-  execSync(`cd ${BUILD_DIR} && zip -0 -X "../${EPUB_NAME}" mimetype`);
-  execSync(`cd ${BUILD_DIR} && zip -r "../${EPUB_NAME}" META-INF OEBPS`);
+  execSync(`cd ${BUILD_DIR} && zip -0 -X "../${epubName}" mimetype`);
+  execSync(`cd ${BUILD_DIR} && zip -r "../${epubName}" META-INF OEBPS`);
   fs.rmSync(BUILD_DIR, { recursive: true });
 
-  console.log(`✅ Done! File: ./${EPUB_NAME}`);
+  console.log(`✅ Done! File: ./${epubName}`);
+}
+
+export function toEpub() {
+  let allChapters = fs.readdirSync(INPUT_DIR)
+    .filter(d => fs.statSync(path.join(INPUT_DIR, d)).isDirectory())
+    .sort();
+  if (limit) allChapters = allChapters.slice(0, limit);
+
+  if (allChapters.length === 0) {
+    console.error(`❌ No chapters found in ./${INPUT_DIR}/`);
+    process.exit(1);
+  }
+
+  if (sections && sections.length > 0) {
+    for (const sec of sections) {
+      const from = Math.max(0, (sec.from ?? 1) - 1);
+      const to = sec.to != null ? sec.to : allChapters.length;
+      const slice = allChapters.slice(from, to);
+      if (slice.length === 0) {
+        console.warn(`⚠️  Section "${sec.name}" has no chapters (from ${sec.from} to ${sec.to}), skipping.`);
+        continue;
+      }
+      buildEpub(slice, sec.name);
+    }
+  } else {
+    buildEpub(allChapters, EPUB_NAME);
+  }
 }
 
 if (process.argv[1].endsWith('toEpub.js')) toEpub();

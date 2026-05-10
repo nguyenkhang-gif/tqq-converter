@@ -16,7 +16,8 @@
     "waitAfterScroll": 1500,
     "waitBetweenChapters": 1000,
     "headless": true,
-    "limit": 10,
+    "from": 1,
+    "limit": null,
     "urls": [
       "https://truyenqqko.com/truyen-tranh/chao-mung-cau-den-truong-iruma-kun-3188-chap-0",
       "https://truyenqqko.com/truyen-tranh/chao-mung-cau-den-truong-iruma-kun-3188-chap-0-1",
@@ -500,6 +501,7 @@
   },
   "epub": {
     "outputFile": "manga.epub",
-    "buildDir": ".epub-build"
+    "buildDir": ".epub-build",
+    "sections": null
   }
 }
