@@ -6,7 +6,10 @@ Download manga images from truyenqqko.com and package them into an EPUB file.
 
 ```bash
 npm install
+npm run init
 ```
+
+`npm run init` creates the required folders and a blank `data.html` placeholder so you don't have to create them manually.
 
 ## Full Workflow (recommended)
 
