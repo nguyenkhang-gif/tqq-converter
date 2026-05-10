@@ -67,13 +67,25 @@ export async function scrape() {
 
   const pool = createPool(concurrency);
 
-  async function scrapeChapter(url, i) {
+  async function scrapeChapter(url, i, attempt = 1) {
     const chapterDir = path.join(OUTPUT_DIR, `chapter-${String(start + i + 1).padStart(3, '0')}`);
     fs.mkdirSync(chapterDir, { recursive: true });
 
-    console.log(`\n📖 [${i + 1}/${URLS.length}] ${url}`);
+    console.log(`\n📖 [${i + 1}/${URLS.length}] ${url}${attempt > 1 ? ` (retry ${attempt})` : ''}`);
 
-    const browser = await puppeteer.launch({ headless });
+    let browser;
+    try {
+      browser = await puppeteer.launch({ headless });
+    } catch (err) {
+      if (attempt <= 3) {
+        console.warn(`   [ch${start + i + 1}] ⚠️  Browser launch failed, retrying in 5s...`);
+        await sleep(5000);
+        return scrapeChapter(url, i, attempt + 1);
+      }
+      console.warn(`   [ch${start + i + 1}] ❌ Browser launch failed after 3 attempts: ${err.message}`);
+      return;
+    }
+
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 900 });
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36');
