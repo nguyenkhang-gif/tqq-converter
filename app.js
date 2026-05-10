@@ -7,8 +7,8 @@ import * as cheerio from 'cheerio';
 import Epub from 'epub-gen';
 
 const inputFile = 'data.html';
-const epubTitle = 'Gimai Seikatsu Vol 6';
-const epubAuthor = 'DuyAnhBi4';
+const epubTitle = 'Gimai Seikatsu Vol 9';
+const epubAuthor = 'mis3ry';
 const IMG_DIR = './epub-images';
 
 const LOCAL_COVER_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
@@ -71,6 +71,59 @@ async function localizeImages(chapters) {
   }
 }
 
+function renderComments($, $commentsList) {
+  if (!$commentsList || $commentsList.length === 0) return '';
+
+  const cards = $commentsList.find('.comment-card-container').toArray();
+  if (cards.length === 0) return '';
+
+  const items = [];
+  for (const card of cards) {
+    const $card = $(card);
+
+    // Skip the comment-input field if it ever matches
+    if ($card.find('textarea').length > 0 && $card.find('pre.text-body-sm').length === 0) continue;
+
+    const author = $card.find('h3.title-action').first().text().trim();
+    const badge = $card.find('.pill__HVTvX').first().text().trim();
+    const $pre = $card.find('pre.text-body-sm').first();
+    const text = $pre.length ? ($pre.html() || '').trim() : '';
+    const date = $card.find('p.postedDate__xcq5D').first().text().trim();
+
+    if (!author && !text) continue;
+
+    const isReply = $card.parents('.comment-card-container').length > 0;
+    const indentStyle = isReply
+      ? 'margin:6px 0 6px 24px;border-left:3px solid #d0d0d0;padding:6px 10px;background:#fafafa;'
+      : 'margin:10px 0;padding:8px 10px;border-bottom:1px solid #eee;';
+
+    const badgeHtml = badge
+      ? ` <span style="background:#a93e19;color:#fff;font-size:0.72em;padding:1px 6px;border-radius:3px;vertical-align:middle;">${badge}</span>`
+      : '';
+
+    const dateHtml = date
+      ? ` <span style="color:#888;font-size:0.8em;margin-left:6px;">· ${date}</span>`
+      : '';
+
+    items.push(
+      `<div style="${indentStyle}">` +
+        `<div style="font-size:0.92em;"><strong>${author || '(ẩn danh)'}</strong>${badgeHtml}${dateHtml}</div>` +
+        `<div style="margin-top:4px;white-space:pre-wrap;">${text}</div>` +
+      `</div>`
+    );
+  }
+
+  if (items.length === 0) return '';
+
+  return (
+    `\n<aside aria-hidden="true" role="doc-endnotes" class="wp-comments">\n` +
+    `<hr style="margin-top:32px;border:none;border-top:1px solid #ccc;"/>\n` +
+    `<h3 style="margin-top:16px;">💬 Bình luận (${items.length})</h3>\n` +
+    `<div>${items.join('\n')}</div>\n` +
+    `</aside>`
+  );
+}
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -96,12 +149,15 @@ try {
 
   const chapters = [];
 
+  // Iterate top-level articles. For each article, look for the matching comments-list:
+  // - If wrapped in <section class="chapter-bundle">, take the comments-list inside that section
+  // - Otherwise, fall back to the next .comments-list sibling (if any)
   $('article.story-part').each((i, article) => {
-    const title = $(article).find('.part-header h1').text().trim()
-      || `Chapter ${i + 1}`;
+    const $article = $(article);
+    const title = $article.find('.part-header h1').text().trim() || `Chapter ${i + 1}`;
 
     const paragraphs = [];
-    $(article).find('div.panel-reading p[data-p-id]').each((j, p) => {
+    $article.find('div.panel-reading p[data-p-id]').each((j, p) => {
       $(p).find('.component-wrapper').remove();
       const inner = $(p).html().trim();
       if (inner && inner !== '<br>') {
@@ -109,8 +165,18 @@ try {
       }
     });
 
-    if (paragraphs.length > 0) {
-      chapters.push({ title, data: paragraphs.join('\n') });
+    let $commentsList;
+    const $bundle = $article.closest('section.chapter-bundle');
+    if ($bundle.length > 0) {
+      $commentsList = $bundle.find('.comments-list').first();
+    } else {
+      $commentsList = $article.nextAll('.comments-list').first();
+    }
+
+    const commentsHtml = renderComments($, $commentsList);
+
+    if (paragraphs.length > 0 || commentsHtml) {
+      chapters.push({ title, data: paragraphs.join('\n') + commentsHtml });
     }
   });
 

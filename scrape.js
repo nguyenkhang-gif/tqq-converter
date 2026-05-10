@@ -3,27 +3,29 @@ import fs from 'fs';
 import readline from 'readline';
 
 const URLS = [
-  "https://www.wattpad.com/1219339655-gimai-seikatsu-vol-5-minh-h%E1%BB%8Da",
-  "https://www.wattpad.com/1219631847-gimai-seikatsu-vol-5-m%E1%BB%9F-%C4%91%E1%BA%A7u",
-  "https://www.wattpad.com/1221603583-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-1-ng%C3%A0y-19-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1227784097-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-2-ng%C3%A0y-19-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1235896066-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-3-ng%C3%A0y-20-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1237761575-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-4-ng%C3%A0y-20-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1255773478-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-5-ng%C3%A0y-21-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1256961011-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-6-ng%C3%A0y-21-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1260257214-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-7-ng%C3%A0y-29-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1261162910-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-8-ng%C3%A0y-29-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1266041898-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-9-ng%C3%A0y-30-th%C3%A1ng-10-th%E1%BB%A9",
-  "https://www.wattpad.com/1272223647-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-10-ng%C3%A0y-30-th%C3%A1ng-10",
-  "https://www.wattpad.com/1273911361-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-11-ng%C3%A0y-31-th%C3%A1ng-10",
-  "https://www.wattpad.com/1273913049-gimai-seikatsu-vol-5-ch%C6%B0%C6%A1ng-12-ng%C3%A0y-31-th%C3%A1ng-10",
-  "https://www.wattpad.com/1274497827-gimai-seikatsu-vol-5-l%E1%BB%9Di-b%E1%BA%A1t",
-  "https://www.wattpad.com/1275824578-gimai-seikatsu-vol-5-tr%C3%B2-ch%C6%A1i-%C3%B4-ch%E1%BB%AF-c%C3%B9ng-em-k%E1%BA%BF"
+  "https://www.wattpad.com/1424837505-gimai-seikatsu-volume-9-minh-h%E1%BB%8Da",
+  "https://www.wattpad.com/1460358306-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-1-12-th%C3%A1ng-6-th%E1%BB%A9",
+  "https://www.wattpad.com/1461225048-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-2-12-th%C3%A1ng-6-th%E1%BB%A9",
+  "https://www.wattpad.com/1463032555-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-3-13-th%C3%A1ng-6-ch%E1%BB%A7",
+  "https://www.wattpad.com/1465868098-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-4-13-th%C3%A1ng-6-ch%E1%BB%A7",
+  "https://www.wattpad.com/1465877236-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-5-14-th%C3%A1ng-6-th%E1%BB%A9",
+  "https://www.wattpad.com/1465894379-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-6-14-th%C3%A1ng-6-th%E1%BB%A9",
+  "https://www.wattpad.com/1466125555-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-7-15-th%C3%A1ng-6-th%E1%BB%A9-ba",
+  "https://www.wattpad.com/1469369984-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-8-15-th%C3%A1ng-6-th%E1%BB%A9-ba",
+  "https://www.wattpad.com/1469398585-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-9-20-th%C3%A1ng-7-th%E1%BB%A9-ba",
+  "https://www.wattpad.com/1469664011-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-10-20-th%C3%A1ng-7-th%E1%BB%A9",
+  "https://www.wattpad.com/1471120026-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-11-22-th%C3%A1ng-7-th%E1%BB%A9",
+  "https://www.wattpad.com/1471344137-gimai-seikatsu-volume-9-ch%C6%B0%C6%A1ng-12-22-th%C3%A1ng-7-th%E1%BB%A9"
 ];
 
 const SCROLL_STEP = 800;
 const SCROLL_DELAY = 1000;
 const OUTPUT_FILE = 'data.html';
+
+const SCRAPE_COMMENTS = true;
+const COMMENT_SCROLL_DELAY = 1200;
+const COMMENT_MAX_ITERATIONS = 80;
+const REPLY_MAX_CLICKS = 200;
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -46,6 +48,71 @@ async function scrollUntilEnd(page) {
 
     if (status === 'nav' || status === 'bottom') break;
     await sleep(SCROLL_DELAY);
+  }
+}
+
+async function loadAllComments(page) {
+  let stagnant = 0;
+  let lastHeight = 0;
+
+  for (let i = 0; i < COMMENT_MAX_ITERATIONS; i++) {
+    const result = await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const loadMore = buttons.find(b => {
+        if (b.disabled || b.offsetParent === null) return false;
+        const text = (b.textContent || '').trim().toLowerCase();
+        const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+        return text.startsWith('hiển thị thêm')
+            || text.startsWith('xem thêm')
+            || text.startsWith('show more')
+            || text.startsWith('load more')
+            || aria.includes('show more')
+            || aria.includes('load more');
+      });
+
+      if (loadMore) {
+        loadMore.scrollIntoView({ block: 'center' });
+        loadMore.click();
+        return { action: 'clicked', height: document.documentElement.scrollHeight };
+      }
+
+      window.scrollTo(0, document.documentElement.scrollHeight);
+      return { action: 'scrolled', height: document.documentElement.scrollHeight };
+    });
+
+    await sleep(COMMENT_SCROLL_DELAY);
+
+    if (result.height === lastHeight && result.action === 'scrolled') {
+      stagnant++;
+      if (stagnant >= 3) break;
+    } else {
+      stagnant = 0;
+      lastHeight = result.height;
+    }
+  }
+}
+
+async function expandAllReplies(page) {
+  for (let i = 0; i < REPLY_MAX_CLICKS; i++) {
+    const clicked = await page.evaluate(() => {
+      const isReplyBtn = (b) => {
+        if (b.disabled || b.offsetParent === null) return false;
+        const aria = (b.getAttribute('aria-label') || '').toLowerCase();
+        if (aria === 'view replies') return true;
+        const text = (b.textContent || '').trim().toLowerCase();
+        return text.startsWith('xem ') && text.includes('trả lời') && !text.startsWith('trả lời');
+      };
+      const target = Array.from(document.querySelectorAll('button')).find(isReplyBtn);
+      if (target) {
+        target.scrollIntoView({ block: 'center' });
+        target.click();
+        return true;
+      }
+      return false;
+    });
+
+    if (!clicked) break;
+    await sleep(700);
   }
 }
 
@@ -73,19 +140,35 @@ async function scrollUntilEnd(page) {
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
     await sleep(1500);
 
-    console.log('  ⏬ Đang scroll...');
+    console.log('  ⏬ Đang scroll nội dung chương...');
     await scrollUntilEnd(page);
 
-    const articleHtml = await page.evaluate(() => {
-      const el = document.querySelector('article.story-part');
-      return el ? el.outerHTML : null;
+    if (SCRAPE_COMMENTS) {
+      console.log('  💬 Đang load comments...');
+      await loadAllComments(page);
+      console.log('  💬 Đang mở rộng replies...');
+      await expandAllReplies(page);
+      // After replies expand, more comments may load — scroll a bit more
+      await loadAllComments(page);
+    }
+
+    const result = await page.evaluate(() => {
+      const article = document.querySelector('article.story-part');
+      if (!article) return null;
+      const lists = document.querySelectorAll('.comments-list');
+      const comments = lists.length ? lists[lists.length - 1] : null;
+      return {
+        article: article.outerHTML,
+        comments: comments ? comments.outerHTML : ''
+      };
     });
 
-    if (articleHtml) {
-      // Append vào file ngay, không chờ xong hết
-      fs.appendFileSync(OUTPUT_FILE, articleHtml + '\n\n', 'utf8');
+    if (result) {
+      const bundle =
+        `<section class="chapter-bundle">\n${result.article}\n${result.comments}\n</section>\n\n`;
+      fs.appendFileSync(OUTPUT_FILE, bundle, 'utf8');
       saved++;
-      console.log(`  ✅ Đã lưu chương ${i + 1} vào ${OUTPUT_FILE}`);
+      console.log(`  ✅ Đã lưu chương ${i + 1} (${result.comments ? 'kèm comments' : 'không có comments'}) vào ${OUTPUT_FILE}`);
     } else {
       console.warn(`  ⚠️  Không tìm thấy <article>, bỏ qua`);
     }
