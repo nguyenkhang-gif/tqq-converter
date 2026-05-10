@@ -11,6 +11,7 @@ const defaultConfig = {
     outputDir: 'output',
     referer: 'https://truyenqqko.com/',
     headless: true,
+    concurrency: 1,
     from: 1,
     limit: null,
     imgSelector: '.page-chapter img',
