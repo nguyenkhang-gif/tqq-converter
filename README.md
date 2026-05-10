@@ -39,6 +39,7 @@ All settings are in `config.json`, no code changes needed.
     "headless": true,            // true = run in background, false = show browser
     "from": 1,                   // Start from this chapter (1-indexed, default 1)
     "limit": null,               // Max chapters to download from "from" (null = all)
+    "concurrency": 1,            // Parallel chapters (1 = sequential, 3 = 3 at once)
     "imgSelector": ".page-chapter img", // CSS selector for images in chapter page
     "scroll": {
       "distance": 400,           // Pixels per scroll step
@@ -124,6 +125,7 @@ node toEpub.js
 | Start from chapter N | Set `"from": N` in `scrape` config |
 | Download chapters N to M | Set `"from": N, "limit": M-N+1` in `scrape` config |
 | Only process first N chapters | Set `"limit": N` in `scrape` config |
+| Download multiple chapters at once | Set `"concurrency": N` in `scrape` config (default 1) |
 | Split into multiple EPUB volumes | Set `"sections"` array in `epub` config |
 | Switch to a different website | Update `indexUrl`, `referer`, `imgSelector` in config |
 | Browser keeps stealing focus | Set `"headless": true` |

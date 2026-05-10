@@ -5,9 +5,30 @@ import https from 'https';
 import http from 'http';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-const { urls: _URLS, from = 1, limit, outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL, waitAfterLoad, waitAfterScroll, waitBetweenChapters, headless = true, imgSelector = '.page-chapter img' } = cfg.scrape;
+const { urls: _URLS, from = 1, limit, concurrency = 1, outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL, waitAfterLoad, waitAfterScroll, waitBetweenChapters, headless = true, imgSelector = '.page-chapter img' } = cfg.scrape;
 const start = Math.max(0, from - 1);
 const URLS = _URLS.slice(start, limit ? start + limit : undefined);
+
+function createPool(size) {
+  let active = 0;
+  const queue = [];
+  return function run(fn) {
+    return new Promise((resolve, reject) => {
+      const attempt = () => {
+        if (active < size) {
+          active++;
+          fn().then(resolve, reject).finally(() => {
+            active--;
+            if (queue.length) queue.shift()();
+          });
+        } else {
+          queue.push(attempt);
+        }
+      };
+      attempt();
+    });
+  };
+}
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
@@ -40,9 +61,14 @@ export async function scrape() {
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  for (let i = 0; i < URLS.length; i++) {
-    const url = URLS[i];
-    const chapterDir = path.join(OUTPUT_DIR, `chapter-${String(i + 1).padStart(3, '0')}`);
+  if (concurrency > 1) {
+    console.log(`⚡ Running ${concurrency} chapters in parallel`);
+  }
+
+  const pool = createPool(concurrency);
+
+  async function scrapeChapter(url, i) {
+    const chapterDir = path.join(OUTPUT_DIR, `chapter-${String(start + i + 1).padStart(3, '0')}`);
     fs.mkdirSync(chapterDir, { recursive: true });
 
     console.log(`\n📖 [${i + 1}/${URLS.length}] ${url}`);
@@ -56,7 +82,7 @@ export async function scrape() {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await sleep(waitAfterLoad);
 
-      console.log(`   ⏬ Scrolling to trigger lazy load...`);
+      console.log(`   [ch${start + i + 1}] ⏬ Scrolling...`);
       await page.evaluate(({ distance, delay }) => {
         return new Promise(resolve => {
           const timer = setInterval(() => {
@@ -77,32 +103,30 @@ export async function scrape() {
       , imgSelector);
 
       if (imgUrls.length === 0) {
-        console.warn(`   ⚠️  No images found, skipping.`);
+        console.warn(`   [ch${start + i + 1}] ⚠️  No images found, skipping.`);
       } else {
-        console.log(`   🖼️  ${imgUrls.length} images, downloading...`);
-
+        console.log(`   [ch${start + i + 1}] 🖼️  ${imgUrls.length} images, downloading...`);
         for (let j = 0; j < imgUrls.length; j++) {
-          const imgUrl = imgUrls[j];
-          const ext = path.extname(new URL(imgUrl).pathname) || '.jpg';
+          const ext = path.extname(new URL(imgUrls[j]).pathname) || '.jpg';
           const dest = path.join(chapterDir, `${String(j).padStart(3, '0')}${ext}`);
           try {
-            await downloadImage(imgUrl, dest);
-            process.stdout.write(`\r   ✅ ${j + 1}/${imgUrls.length}`);
+            await downloadImage(imgUrls[j], dest);
           } catch (err) {
-            console.warn(`\n   ⚠️  Failed to download image ${j}: ${err.message}`);
+            console.warn(`\n   [ch${start + i + 1}] ⚠️  Failed image ${j}: ${err.message}`);
           }
         }
-        console.log(`\n   ✅ Chapter ${i + 1} done`);
+        console.log(`   [ch${start + i + 1}] ✅ Done (${imgUrls.length} images)`);
       }
     } catch (err) {
-      console.warn(`   ❌ Error: ${err.message}`);
+      console.warn(`   [ch${start + i + 1}] ❌ Error: ${err.message}`);
     } finally {
       await browser.close();
-      console.log(`   🔒 Browser closed`);
     }
 
     await sleep(waitBetweenChapters);
   }
+
+  await Promise.all(URLS.map((url, i) => pool(() => scrapeChapter(url, i))));
 
   console.log(`\n✅ Done! Images saved to ./${OUTPUT_DIR}/`);
 }
