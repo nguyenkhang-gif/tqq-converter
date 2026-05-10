@@ -4,8 +4,9 @@ import { execSync } from 'child_process';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { title: MANGA_TITLE, author: MANGA_AUTHOR, language: LANG } = cfg.manga;
-const { outputDir: INPUT_DIR, limit } = cfg.scrape;
-const { outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections } = cfg.epub;
+const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
+const { outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections, inputDir } = cfg.epub;
+const INPUT_DIR = inputDir ?? SCRAPE_DIR;
 
 function mime(ext) {
   return ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg';

@@ -22,6 +22,7 @@ const defaultConfig = {
     urls: [],
   },
   epub: {
+    inputDir: null,
     outputFile: 'manga.epub',
     buildDir: '.epub-build',
     sections: null,
