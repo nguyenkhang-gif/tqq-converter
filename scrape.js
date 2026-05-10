@@ -68,33 +68,23 @@ export async function scrape() {
   const pool = createPool(concurrency);
 
   async function scrapeChapter(url, i, attempt = 1) {
-    const chapterDir = path.join(OUTPUT_DIR, `chapter-${String(start + i + 1).padStart(3, '0')}`);
+    const chNum = start + i + 1;
+    const chapterDir = path.join(OUTPUT_DIR, `chapter-${String(chNum).padStart(3, '0')}`);
     fs.mkdirSync(chapterDir, { recursive: true });
 
     console.log(`\n📖 [${i + 1}/${URLS.length}] ${url}${attempt > 1 ? ` (retry ${attempt})` : ''}`);
 
     let browser;
     try {
-      browser = await puppeteer.launch({ headless });
-    } catch (err) {
-      if (attempt <= 3) {
-        console.warn(`   [ch${start + i + 1}] ⚠️  Browser launch failed, retrying in 5s...`);
-        await sleep(5000);
-        return scrapeChapter(url, i, attempt + 1);
-      }
-      console.warn(`   [ch${start + i + 1}] ❌ Browser launch failed after 3 attempts: ${err.message}`);
-      return;
-    }
+      browser = await puppeteer.launch({ headless, protocolTimeout: 60000 });
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 900 });
+      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36');
 
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 900 });
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36');
-
-    try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await sleep(waitAfterLoad);
 
-      console.log(`   [ch${start + i + 1}] ⏬ Scrolling...`);
+      console.log(`   [ch${chNum}] ⏬ Scrolling...`);
       await page.evaluate(({ distance, delay }) => {
         return new Promise(resolve => {
           const timer = setInterval(() => {
@@ -115,24 +105,30 @@ export async function scrape() {
       , imgSelector);
 
       if (imgUrls.length === 0) {
-        console.warn(`   [ch${start + i + 1}] ⚠️  No images found, skipping.`);
+        console.warn(`   [ch${chNum}] ⚠️  No images found, skipping.`);
       } else {
-        console.log(`   [ch${start + i + 1}] 🖼️  ${imgUrls.length} images, downloading...`);
+        console.log(`   [ch${chNum}] 🖼️  ${imgUrls.length} images, downloading...`);
         for (let j = 0; j < imgUrls.length; j++) {
           const ext = path.extname(new URL(imgUrls[j]).pathname) || '.jpg';
           const dest = path.join(chapterDir, `${String(j).padStart(3, '0')}${ext}`);
           try {
             await downloadImage(imgUrls[j], dest);
           } catch (err) {
-            console.warn(`\n   [ch${start + i + 1}] ⚠️  Failed image ${j}: ${err.message}`);
+            console.warn(`\n   [ch${chNum}] ⚠️  Failed image ${j}: ${err.message}`);
           }
         }
-        console.log(`   [ch${start + i + 1}] ✅ Done (${imgUrls.length} images)`);
+        console.log(`   [ch${chNum}] ✅ Done (${imgUrls.length} images)`);
       }
     } catch (err) {
-      console.warn(`   [ch${start + i + 1}] ❌ Error: ${err.message}`);
+      if (attempt <= 3) {
+        console.warn(`   [ch${chNum}] ⚠️  Error: ${err.message} — retrying in 5s...`);
+        await browser?.close();
+        await sleep(5000);
+        return scrapeChapter(url, i, attempt + 1);
+      }
+      console.warn(`   [ch${chNum}] ❌ Failed after 3 attempts: ${err.message}`);
     } finally {
-      await browser.close();
+      await browser?.close();
     }
 
     await sleep(waitBetweenChapters);
