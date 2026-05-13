@@ -73,7 +73,17 @@ Chapter URL management: clicking the badge in the Scrape config section opens a 
 - Loads page list from `GET /api/reader/:file/pages` (parsed from `unzip -l` output)
 - Streams each image from `GET /api/reader/:file/page/*` (via `unzip -p`)
 - Three view modes: fit-width (default), fit-height, webtoon scroll
-- Keyboard arrow navigation; click left/right half of image to turn pages
+- Navigation: keyboard arrows, click left/right half of image, touch swipe (mobile)
+- Mobile responsive: sidebar collapses to a slide-in drawer toggled by ☰ button
+
+### Network access
+
+Server binds `0.0.0.0` and prints both addresses on startup:
+```
+🌐  Local:   http://localhost:3000
+📱  Network: http://<LAN-IP>:3000
+```
+Devices on the same WiFi can access the UI and reader via the Network URL. Override port with `PORT=8080 npm run ui`.
 
 ### Pipeline stages (services/)
 

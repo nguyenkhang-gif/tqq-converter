@@ -16,6 +16,12 @@ npm run ui        # → open http://localhost:3000
 npm run ui:stop   # stop the server
 ```
 
+When started, the server prints both addresses:
+```
+🌐  Local:   http://localhost:3000
+📱  Network: http://192.168.x.x:3000   ← access from phone/tablet on same WiFi
+```
+
 ### Quick Start (no config editing needed)
 
 1. Paste the chapter list page URL into the **Quick Start** box
@@ -45,8 +51,10 @@ Click **📖 Reader** in the top-right of the UI. Features:
 - Lists all CBZ files in `cbzs/`
 - **Fit width** / **Fit height** / **Webtoon scroll** modes
 - Click left/right half of image to navigate pages
-- Arrow key navigation
+- Arrow key navigation + **touch swipe** on mobile
 - Jump to page
+- Mobile: sidebar hidden by default, open with **☰** button
+- Access from phone via the Network URL printed on startup
 
 ---
 

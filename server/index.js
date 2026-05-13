@@ -1,6 +1,7 @@
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 import { spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
@@ -195,7 +196,18 @@ app.get('/api/reader/:file/page/*', (req, res) => {
   proc.on('error', () => res.status(500).end());
 });
 
+function getLocalIP() {
+  for (const ifaces of Object.values(os.networkInterfaces())) {
+    for (const iface of ifaces) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return 'localhost';
+}
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n🌐  Manga Converter UI → http://localhost:${PORT}\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  const ip = getLocalIP();
+  console.log(`\n🌐  Local:    http://localhost:${PORT}`);
+  console.log(`📱  Network:  http://${ip}:${PORT}\n`);
 });
