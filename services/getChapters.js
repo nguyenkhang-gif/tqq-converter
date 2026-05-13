@@ -31,7 +31,6 @@ for (const sel of selectors) {
     const name = $(el).text().trim();
     const href = $(el).attr('href');
     if (!href) return;
-
     const url = href.startsWith('http') ? href : new URL(href, BASE_URL).href;
     const numMatch = name.match(/(\d+(\.\d+)?)/);
     const num = numMatch ? parseFloat(numMatch[1]) : chapters.length + 1;
@@ -62,4 +61,3 @@ console.log('\n💾 Saved chapters.json');
 cfg.scrape.urls = unique.map(c => c.url);
 fs.writeFileSync('config.json', JSON.stringify(cfg, null, 2));
 console.log('⚙️  Updated config.json > scrape.urls');
-console.log('\nRun "node run.js" to download and create EPUB.');

@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { title: MANGA_TITLE, author: MANGA_AUTHOR, language: LANG } = cfg.manga;
 const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
 const { outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections, inputDir } = cfg.epub;
 const INPUT_DIR = inputDir ?? SCRAPE_DIR;
+
+const WEBTOON_MODE = process.argv.includes('--webtoon');
 
 function mime(ext) {
   return ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg';
@@ -17,18 +20,19 @@ function uid() {
 }
 
 function buildEpub(chapters, epubName, title = MANGA_TITLE) {
-  const pages = [];
+  const chapterPages = [];
+  let totalPages = 0;
   for (let ci = 0; ci < chapters.length; ci++) {
     const chapterId = chapters[ci];
     const images = fs.readdirSync(path.join(INPUT_DIR, chapterId))
       .filter(f => /\.(jpe?g|png|gif)$/i.test(f))
-      .sort();
-    for (let pi = 0; pi < images.length; pi++) {
-      pages.push({ chapterIdx: ci, chapterId, pageIdx: pi, imgFile: images[pi], ext: path.extname(images[pi]).toLowerCase() });
-    }
+      .sort()
+      .map((imgFile, pi) => ({ chapterId, pageIdx: pi, imgFile, ext: path.extname(imgFile).toLowerCase() }));
+    chapterPages.push({ chapterId, chapterIdx: ci, images });
+    totalPages += images.length;
   }
 
-  console.log(`📚 [${title}] ${chapters.length} chapters, ${pages.length} pages → ${epubName}`);
+  console.log(`📚 [${title}] ${chapters.length} chapters, ${totalPages} pages → ${epubName} (${WEBTOON_MODE ? 'webtoon' : 'paginated'})`);
 
   if (fs.existsSync(BUILD_DIR)) fs.rmSync(BUILD_DIR, { recursive: true });
   fs.mkdirSync(path.join(BUILD_DIR, 'META-INF'), { recursive: true });
@@ -36,7 +40,6 @@ function buildEpub(chapters, epubName, title = MANGA_TITLE) {
   fs.mkdirSync(path.join(BUILD_DIR, 'OEBPS', 'pages'), { recursive: true });
 
   fs.writeFileSync(path.join(BUILD_DIR, 'mimetype'), 'application/epub+zip');
-
   fs.writeFileSync(path.join(BUILD_DIR, 'META-INF', 'container.xml'), `<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
@@ -46,40 +49,80 @@ function buildEpub(chapters, epubName, title = MANGA_TITLE) {
 
   const manifestItems = [];
   const spineItems = [];
+  const navPoints = [];
 
-  for (const p of pages) {
-    const pageId = `${p.chapterId}-${String(p.pageIdx).padStart(3, '0')}`;
-    const imgDestDir = path.join(BUILD_DIR, 'OEBPS', 'images', p.chapterId);
-    fs.mkdirSync(imgDestDir, { recursive: true });
-    fs.copyFileSync(path.join(INPUT_DIR, p.chapterId, p.imgFile), path.join(imgDestDir, p.imgFile));
+  if (WEBTOON_MODE) {
+    for (const { chapterId, chapterIdx, images } of chapterPages) {
+      const imgDestDir = path.join(BUILD_DIR, 'OEBPS', 'images', chapterId);
+      fs.mkdirSync(imgDestDir, { recursive: true });
 
-    fs.writeFileSync(path.join(BUILD_DIR, 'OEBPS', 'pages', `${pageId}.xhtml`),
-      `<?xml version="1.0" encoding="UTF-8"?>
+      const imgTags = images.map(({ imgFile, ext }) => {
+        fs.copyFileSync(path.join(INPUT_DIR, chapterId, imgFile), path.join(imgDestDir, imgFile));
+        manifestItems.push(`    <item id="img-${chapterId}-${imgFile}" href="images/${chapterId}/${imgFile}" media-type="${mime(ext)}"/>`);
+        return `  <img src="../images/${chapterId}/${imgFile}" alt="${imgFile}"/>`;
+      }).join('\n');
+
+      fs.writeFileSync(path.join(BUILD_DIR, 'OEBPS', 'pages', `${chapterId}.xhtml`),
+        `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${chapterId.replace(/-/g, ' ')}</title>
+  <style>html,body{margin:0;padding:0;background:#000;width:100%;}img{display:block;margin:0 auto;max-width:100%;height:auto;}</style>
+</head>
+<body>
+${imgTags}
+</body>
+</html>`);
+
+      manifestItems.push(`    <item id="page-${chapterId}" href="pages/${chapterId}.xhtml" media-type="application/xhtml+xml"/>`);
+      spineItems.push(`    <itemref idref="page-${chapterId}"/>`);
+      navPoints.push(`    <navPoint id="nav-${chapterIdx + 1}" playOrder="${chapterIdx + 1}">
+      <navLabel><text>${chapterId.replace(/-/g, ' ')}</text></navLabel>
+      <content src="pages/${chapterId}.xhtml"/>
+    </navPoint>`);
+    }
+  } else {
+    for (const { chapterId, chapterIdx, images } of chapterPages) {
+      const imgDestDir = path.join(BUILD_DIR, 'OEBPS', 'images', chapterId);
+      fs.mkdirSync(imgDestDir, { recursive: true });
+      let firstPageId = null;
+
+      for (const { pageIdx, imgFile, ext } of images) {
+        const pageId = `${chapterId}-${String(pageIdx).padStart(3, '0')}`;
+        if (firstPageId === null) firstPageId = pageId;
+
+        fs.copyFileSync(path.join(INPUT_DIR, chapterId, imgFile), path.join(imgDestDir, imgFile));
+        fs.writeFileSync(path.join(BUILD_DIR, 'OEBPS', 'pages', `${pageId}.xhtml`),
+          `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <title>${pageId}</title>
   <style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;}img{display:block;margin:0 auto;max-width:100%;height:auto;}</style>
 </head>
-<body><img src="../images/${p.chapterId}/${p.imgFile}" alt="${pageId}"/></body>
+<body><img src="../images/${chapterId}/${imgFile}" alt="${pageId}"/></body>
 </html>`);
 
-    manifestItems.push(`    <item id="img-${pageId}" href="images/${p.chapterId}/${p.imgFile}" media-type="${mime(p.ext)}"/>`);
-    manifestItems.push(`    <item id="page-${pageId}" href="pages/${pageId}.xhtml" media-type="application/xhtml+xml"/>`);
-    spineItems.push(`    <itemref idref="page-${pageId}"/>`);
+        manifestItems.push(`    <item id="img-${pageId}" href="images/${chapterId}/${imgFile}" media-type="${mime(ext)}"/>`);
+        manifestItems.push(`    <item id="page-${pageId}" href="pages/${pageId}.xhtml" media-type="application/xhtml+xml"/>`);
+        spineItems.push(`    <itemref idref="page-${pageId}"/>`);
+      }
+
+      if (firstPageId) {
+        navPoints.push(`    <navPoint id="nav-${chapterIdx + 1}" playOrder="${chapterIdx + 1}">
+      <navLabel><text>${chapterId.replace(/-/g, ' ')}</text></navLabel>
+      <content src="pages/${firstPageId}.xhtml"/>
+    </navPoint>`);
+      }
+    }
   }
 
-  const navPoints = chapters.map((chId, ci) => {
-    const first = pages.find(p => p.chapterId === chId);
-    if (!first) return '';
-    const pageId = `${chId}-${String(first.pageIdx).padStart(3, '0')}`;
-    return `    <navPoint id="nav-${ci + 1}" playOrder="${ci + 1}">
-      <navLabel><text>${chId.replace(/-/g, ' ')}</text></navLabel>
-      <content src="pages/${pageId}.xhtml"/>
-    </navPoint>`;
-  }).join('\n');
-
   const bookId = uid();
+  const renditionMeta = WEBTOON_MODE ? '' : `
+    <meta name="rendition:layout" content="pre-paginated"/>
+    <meta name="rendition:orientation" content="auto"/>
+    <meta name="rendition:spread" content="auto"/>`;
 
   fs.writeFileSync(path.join(BUILD_DIR, 'OEBPS', 'content.opf'),
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -89,10 +132,7 @@ function buildEpub(chapters, epubName, title = MANGA_TITLE) {
     <dc:creator>${MANGA_AUTHOR}</dc:creator>
     <dc:language>${LANG}</dc:language>
     <dc:identifier id="bookId">${bookId}</dc:identifier>
-    <meta name="book-type" content="comic"/>
-    <meta name="rendition:layout" content="pre-paginated"/>
-    <meta name="rendition:orientation" content="auto"/>
-    <meta name="rendition:spread" content="auto"/>
+    <meta name="book-type" content="comic"/>${renditionMeta}
   </metadata>
   <manifest>
     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
@@ -110,7 +150,7 @@ ${spineItems.join('\n')}
   <head><meta name="dtb:uid" content="${bookId}"/></head>
   <docTitle><text>${title}</text></docTitle>
   <navMap>
-${navPoints}
+${navPoints.join('\n')}
   </navMap>
 </ncx>`);
 
@@ -119,7 +159,6 @@ ${navPoints}
   execSync(`cd ${BUILD_DIR} && zip -0 -X "../${epubName}" mimetype`);
   execSync(`cd ${BUILD_DIR} && zip -r "../${epubName}" META-INF OEBPS`);
   fs.rmSync(BUILD_DIR, { recursive: true });
-
   console.log(`✅ Done! File: ./${epubName}`);
 }
 
@@ -143,12 +182,11 @@ export function toEpub() {
         console.warn(`⚠️  Section "${sec.name}" has no chapters (from ${sec.from} to ${sec.to}), skipping.`);
         continue;
       }
-      const secTitle = sec.title ?? path.basename(sec.name, '.epub');
-      buildEpub(slice, sec.name, secTitle);
+      buildEpub(slice, sec.name, sec.title ?? path.basename(sec.name, '.epub'));
     }
   } else {
     buildEpub(allChapters, EPUB_NAME);
   }
 }
 
-if (process.argv[1].endsWith('toEpub.js')) toEpub();
+if (process.argv[1] === fileURLToPath(import.meta.url)) toEpub();

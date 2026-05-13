@@ -1,9 +1,19 @@
 node_modules/
+
+# generated output
 output/
 output-compress/
 .epub-build/
-manga.epub
+.cbz-build/
+
+# generated files
 chapters.json
 data.html
+*.epub
+*.cbz
+
+# local config (copy config.example.json to config.json to start)
 config.json
-package-lock.json
+
+# OS
+.DS_Store

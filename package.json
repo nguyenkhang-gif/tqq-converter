@@ -5,11 +5,14 @@
   "main": "index.js",
   "scripts": {
     "init": "node init.js",
-    "scrape": "node scrape.js",
-    "epub": "node toEpub.js",
-    "chapters": "node getChapters.js",
-    "compress": "node compressImg.js",
-    "start": "node run.js"
+    "scrape": "node services/scrape.js",
+    "epub": "node services/toEpub.js",
+    "epub:webtoon": "node services/toEpub.js --webtoon",
+    "chapters": "node services/getChapters.js",
+    "cbz": "node services/toCbz.js",
+    "compress": "node services/compressImg.js",
+    "start": "node run.js",
+    "ui": "node server/index.js"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +20,7 @@
   "description": "",
   "dependencies": {
     "cheerio": "^1.2.0",
+    "express": "^4.22.2",
     "puppeteer": "^24.43.0",
     "sharp": "^0.34.5"
   }

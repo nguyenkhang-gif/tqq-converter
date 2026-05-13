@@ -3,9 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import http from 'http';
+import { fileURLToPath } from 'url';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-const { urls: _URLS, from = 1, limit, concurrency = 1, outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL, waitAfterLoad, waitAfterScroll, waitBetweenChapters, headless = true, imgSelector = '.page-chapter img' } = cfg.scrape;
+const {
+  urls: _URLS, from = 1, limit, concurrency = 1,
+  outputDir: OUTPUT_DIR, referer: REFERER, scroll: SCROLL,
+  waitAfterLoad, waitAfterScroll, waitBetweenChapters,
+  headless = true, imgSelector = '.page-chapter img',
+} = cfg.scrape;
 const start = Math.max(0, from - 1);
 const URLS = _URLS.slice(start, limit ? start + limit : undefined);
 
@@ -30,9 +36,7 @@ function createPool(size) {
   };
 }
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 function downloadImage(url, dest) {
   return new Promise((resolve, reject) => {
@@ -46,10 +50,7 @@ function downloadImage(url, dest) {
       }
       res.pipe(file);
       file.on('finish', () => file.close(resolve));
-    }).on('error', err => {
-      fs.unlink(dest, () => {});
-      reject(err);
-    });
+    }).on('error', err => { fs.unlink(dest, () => {}); reject(err); });
   });
 }
 
@@ -60,10 +61,7 @@ export async function scrape() {
   }
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-
-  if (concurrency > 1) {
-    console.log(`⚡ Running ${concurrency} chapters in parallel`);
-  }
+  if (concurrency > 1) console.log(`⚡ Running ${concurrency} chapters in parallel`);
 
   const pool = createPool(concurrency);
 
@@ -80,29 +78,26 @@ export async function scrape() {
       const page = await browser.newPage();
       await page.setViewport({ width: 1280, height: 900 });
       await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36');
-
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await sleep(waitAfterLoad);
 
       console.log(`   [ch${chNum}] ⏬ Scrolling...`);
-      await page.evaluate(({ distance, delay }) => {
-        return new Promise(resolve => {
-          const timer = setInterval(() => {
-            window.scrollBy(0, distance);
-            if (window.scrollY + window.innerHeight >= document.body.scrollHeight) {
-              clearInterval(timer);
-              resolve();
-            }
-          }, delay);
-        });
-      }, SCROLL);
+      await page.evaluate(({ distance, delay }) => new Promise(resolve => {
+        const timer = setInterval(() => {
+          window.scrollBy(0, distance);
+          if (window.scrollY + window.innerHeight >= document.body.scrollHeight) {
+            clearInterval(timer); resolve();
+          }
+        }, delay);
+      }), SCROLL);
       await sleep(waitAfterScroll);
 
-      const imgUrls = await page.evaluate((sel) =>
-        [...document.querySelectorAll(sel)]
+      const imgUrls = await page.evaluate(
+        sel => [...document.querySelectorAll(sel)]
           .map(img => img.src || img.dataset.original || img.dataset.src)
-          .filter(src => src && !src.startsWith('data:'))
-      , imgSelector);
+          .filter(src => src && !src.startsWith('data:')),
+        imgSelector,
+      );
 
       if (imgUrls.length === 0) {
         console.warn(`   [ch${chNum}] ⚠️  No images found, skipping.`);
@@ -111,11 +106,8 @@ export async function scrape() {
         for (let j = 0; j < imgUrls.length; j++) {
           const ext = path.extname(new URL(imgUrls[j]).pathname) || '.jpg';
           const dest = path.join(chapterDir, `${String(j).padStart(3, '0')}${ext}`);
-          try {
-            await downloadImage(imgUrls[j], dest);
-          } catch (err) {
-            console.warn(`\n   [ch${chNum}] ⚠️  Failed image ${j}: ${err.message}`);
-          }
+          try { await downloadImage(imgUrls[j], dest); }
+          catch (err) { console.warn(`\n   [ch${chNum}] ⚠️  Failed image ${j}: ${err.message}`); }
         }
         console.log(`   [ch${chNum}] ✅ Done (${imgUrls.length} images)`);
       }
@@ -135,8 +127,7 @@ export async function scrape() {
   }
 
   await Promise.all(URLS.map((url, i) => pool(() => scrapeChapter(url, i))));
-
   console.log(`\n✅ Done! Images saved to ./${OUTPUT_DIR}/`);
 }
 
-if (process.argv[1].endsWith('scrape.js')) scrape();
+if (process.argv[1] === fileURLToPath(import.meta.url)) scrape();
