@@ -86,8 +86,25 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .add-sec { margin-top: 6px; font-size: 12px; }
 
 /* ── urls badge ── */
-.url-badge { font-size: 11px; color: var(--muted); padding: 4px 8px; background: var(--surface2); border-radius: 4px; }
+.url-badge { font-size: 11px; color: var(--muted); padding: 4px 8px; background: var(--surface2); border-radius: 4px; cursor: pointer; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 6px; transition: background .15s; }
+.url-badge:hover { background: #2a2a2a; }
 .url-badge span { color: var(--accent); font-weight: 600; }
+
+/* ── modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.hidden { display: none; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); width: 640px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+.modal-header { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
+.modal-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
+.modal-header .close-btn { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
+.modal-header .close-btn:hover { color: var(--text); }
+.modal-body { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.modal-footer .count { font-size: 12px; color: var(--muted); margin-right: auto; }
+.url-list { flex: 1; min-height: 200px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-family: var(--mono); font-size: 11px; resize: none; color: var(--text); line-height: 1.7; overflow-y: auto; }
+.url-list:focus { outline: none; border-color: var(--accent); }
+.add-urls-area textarea { font-family: var(--mono); font-size: 11px; min-height: 80px; }
+.add-urls-area label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: block; }
 
 /* ── buttons ── */
 button { border: none; border-radius: 6px; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 500; padding: 7px 14px; transition: background .15s, opacity .15s; }
@@ -154,6 +171,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   <h1>🗂 Manga Converter</h1>
   <div id="statusBadge" class="status-badge idle">Idle</div>
   <div id="dot" class="dot" title="SSE connection"></div>
+  <a href="/reader.html" target="_blank" style="margin-left:8px;font-size:12px;color:var(--muted);text-decoration:none;padding:5px 10px;border:1px solid var(--border);border-radius:6px;">📖 Reader</a>
 </header>
 
 <!-- ── sidebar ── -->
@@ -213,7 +231,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
           <input type="checkbox" id="scrape.headless" />
           <label for="scrape.headless">Headless (no visible browser)</label>
         </div>
-        <div id="urlsBadge" class="url-badge">URLs: <span>0</span> chapters loaded</div>
+        <div id="urlsBadge" class="url-badge" onclick="openUrlModal()">📋 <span>0</span> chapters &nbsp;›</div>
       </div>
     </details>
 
@@ -303,6 +321,32 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   </div>
 
 </main>
+</div>
+
+<!-- ── URL Manager Modal ── -->
+<div class="modal-overlay hidden" id="urlModal" onclick="e => e.target===this && closeUrlModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Chapter URLs</h3>
+      <button class="close-btn" onclick="closeUrlModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Current URLs (one per line — edit directly)</label>
+        <textarea class="url-list" id="urlListArea" rows="12" spellcheck="false"></textarea>
+      </div>
+      <div class="add-urls-area field">
+        <label>Paste additional URLs to append</label>
+        <textarea id="addUrlsArea" rows="4" placeholder="https://truyenqqko.com/...chap-50&#10;https://truyenqqko.com/...chap-51" spellcheck="false"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="count" id="urlModalCount">0 URLs</span>
+      <button class="btn-secondary" onclick="clearAllUrls()">🗑 Clear all</button>
+      <button class="btn-secondary" onclick="closeUrlModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveUrls()">💾 Save</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -591,6 +635,62 @@ async function flashBtn(btn, msg) {
   await new Promise(r => setTimeout(r, 1500));
   btn.textContent = orig;
 }
+
+// ── URL Modal ─────────────────────────────────────────────────────────────────
+function openUrlModal() {
+  const urls = cfg.scrape?.urls ?? [];
+  const area = document.getElementById('urlListArea');
+  area.value = urls.join('\n');
+  document.getElementById('addUrlsArea').value = '';
+  updateUrlCount(urls.length);
+  document.getElementById('urlModal').classList.remove('hidden');
+  area.addEventListener('input', () => updateUrlCount(parseUrls(area.value).length));
+}
+
+function closeUrlModal() {
+  document.getElementById('urlModal').classList.add('hidden');
+}
+
+function clearAllUrls() {
+  document.getElementById('urlListArea').value = '';
+  updateUrlCount(0);
+}
+
+function updateUrlCount(n) {
+  document.getElementById('urlModalCount').textContent = `${n} URLs`;
+}
+
+function parseUrls(text) {
+  return text.split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
+}
+
+async function saveUrls() {
+  const existing = parseUrls(document.getElementById('urlListArea').value);
+  const added    = parseUrls(document.getElementById('addUrlsArea').value);
+  const merged   = [...new Set([...existing, ...added])];
+
+  cfg.scrape = cfg.scrape ?? {};
+  cfg.scrape.urls = merged;
+
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cfg),
+  });
+
+  document.querySelector('#urlsBadge span').textContent = merged.length;
+  closeUrlModal();
+}
+
+// close modal on overlay click
+document.getElementById('urlModal').addEventListener('click', function(e) {
+  if (e.target === this) closeUrlModal();
+});
+
+// close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeUrlModal();
+});
 </script>
 </body>
 </html>

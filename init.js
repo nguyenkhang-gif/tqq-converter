@@ -22,10 +22,14 @@ const defaultConfig = {
     urls: [],
   },
   epub: {
+    outputDir: 'epubs',
     inputDir: null,
     outputFile: 'manga.epub',
     buildDir: '.epub-build',
     sections: null,
+  },
+  cbz: {
+    outputDir: 'cbzs',
   },
   compress: {
     quality: 80,
@@ -35,7 +39,7 @@ const defaultConfig = {
   },
 };
 
-const dirs = ['output'];
+const dirs = ['output', 'epubs', 'cbzs'];
 const files = {
   'data.html': '<!-- Paste the chapter list page HTML here -->\n',
   'config.json': JSON.stringify(defaultConfig, null, 2) + '\n',

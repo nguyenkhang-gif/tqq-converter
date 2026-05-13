@@ -5,10 +5,13 @@ import { execSync } from 'child_process';
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
 const { outputFile: EPUB_NAME, sections, inputDir } = cfg.epub;
+const { outputDir: CBZ_OUT_DIR = 'cbzs' } = cfg.cbz ?? {};
 const INPUT_DIR = inputDir ?? SCRAPE_DIR;
 
 const CBZ_NAME = EPUB_NAME.replace(/\.epub$/i, '.cbz');
 const BUILD_DIR = '.cbz-build';
+
+fs.mkdirSync(CBZ_OUT_DIR, { recursive: true });
 
 function buildCbz(chapters, cbzName) {
   let totalPages = 0;
@@ -34,13 +37,14 @@ function buildCbz(chapters, cbzName) {
     totalPages += images.length;
   }
 
-  console.log(`📚 ${chapters.length} chapters, ${totalPages} pages → ${cbzName}`);
+  const outPath = path.resolve(CBZ_OUT_DIR, cbzName);
+  console.log(`📚 ${chapters.length} chapters, ${totalPages} pages → ${outPath}`);
   console.log('📦 Packaging CBZ...');
 
-  if (fs.existsSync(cbzName)) fs.unlinkSync(cbzName);
-  execSync(`cd ${BUILD_DIR} && zip -r "../${cbzName}" .`);
+  if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
+  execSync(`cd "${BUILD_DIR}" && zip -r "${outPath}" .`);
   fs.rmSync(BUILD_DIR, { recursive: true });
-  console.log(`✅ Done! File: ./${cbzName}`);
+  console.log(`✅ Done! File: ./${CBZ_OUT_DIR}/${cbzName}`);
 }
 
 let allChapters = fs.readdirSync(INPUT_DIR)

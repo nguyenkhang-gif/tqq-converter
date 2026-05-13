@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manga Reader</title>
+<style>
+:root {
+  --bg:      #0d0d0d;
+  --surface: #161616;
+  --border:  #2a2a2a;
+  --accent:  #7c3aed;
+  --text:    #e5e5e5;
+  --muted:   #737373;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── topbar ── */
+.topbar { display: flex; align-items: center; gap: 12px; padding: 0 16px; height: 48px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.topbar a { color: var(--muted); text-decoration: none; font-size: 13px; }
+.topbar a:hover { color: var(--text); }
+.sep { color: var(--border); }
+#fileTitle { font-size: 14px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-info { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+/* ── layout ── */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ── sidebar ── */
+.sidebar { width: 220px; border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; background: var(--surface); }
+.sidebar-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 12px 14px 6px; }
+.file-item { padding: 9px 14px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; transition: background .1s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-item:hover { background: #1f1f1f; }
+.file-item.active { border-left-color: var(--accent); color: var(--accent); background: #1a1530; }
+.file-size { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.no-files { padding: 16px 14px; font-size: 12px; color: var(--muted); }
+
+/* ── viewer ── */
+.viewer { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+.img-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center; background: #000; cursor: pointer; }
+.img-wrap img { display: block; max-width: 100%; height: auto; user-select: none; }
+.img-wrap.fit-height img { max-width: none; height: 100%; max-height: calc(100vh - 48px - 52px); width: auto; }
+.img-wrap.webtoon { flex-direction: column; cursor: default; }
+.img-wrap.webtoon img { max-width: 800px; width: 100%; height: auto; margin: 0 auto; display: block; }
+
+/* ── empty state ── */
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted); }
+.empty svg { opacity: .3; }
+
+/* ── controls ── */
+.controls { height: 52px; display: flex; align-items: center; justify-content: center; gap: 12px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+button { border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; padding: 6px 14px; background: #1f1f1f; color: var(--text); border: 1px solid var(--border); transition: background .1s; }
+button:hover:not(:disabled) { background: #2a2a2a; }
+button:disabled { opacity: .35; cursor: default; }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-accent:hover:not(:disabled) { background: #6d28d9; }
+
+/* toggle group */
+.toggle-group { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.toggle-group button { border-radius: 0; border: none; border-right: 1px solid var(--border); }
+.toggle-group button:last-child { border-right: none; }
+.toggle-group button.on { background: #2a1f4a; color: var(--accent); }
+
+/* page input */
+.page-jump { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.page-jump input { width: 48px; text-align: center; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 4px 6px; font-size: 13px; }
+.page-jump input:focus { outline: none; border-color: var(--accent); }
+
+/* loading */
+.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); font-size: 13px; color: var(--muted); }
+.spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/">← UI</a>
+  <span class="sep">|</span>
+  <span id="fileTitle">Select a file</span>
+  <span class="page-info" id="pageInfo"></span>
+</div>
+
+<div class="layout">
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-title">Files</div>
+    <div id="fileList"><div class="no-files">Loading…</div></div>
+  </aside>
+
+  <!-- viewer -->
+  <div class="viewer" id="viewer">
+    <div class="empty" id="emptyState">
+      <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+      </svg>
+      <span>Select a CBZ file to read</span>
+    </div>
+    <div class="img-wrap" id="imgWrap" style="display:none"></div>
+    <div class="loading" id="loading" style="display:none"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- controls -->
+<div class="controls" id="controls" style="display:none">
+  <button id="prevBtn" onclick="go(-1)">← Prev</button>
+
+  <div class="page-jump">
+    <input type="number" id="pageInput" min="1" onchange="jumpTo(+this.value - 1)" />
+    <span id="totalPages">/ 0</span>
+  </div>
+
+  <button id="nextBtn" onclick="go(1)">Next →</button>
+
+  <div class="toggle-group">
+    <button id="modeNormal"  onclick="setMode('normal')"  class="on" title="Fit width">↔</button>
+    <button id="modeFitH"    onclick="setMode('fitH')"    title="Fit height">↕</button>
+    <button id="modeWebtoon" onclick="setMode('webtoon')" title="Webtoon (scroll)">≡</button>
+  </div>
+</div>
+
+<script>
+let pages   = [];
+let current = 0;
+let curFile = null;
+let mode    = 'normal'; // 'normal' | 'fitH' | 'webtoon'
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadFileList();
+
+async function loadFileList() {
+  const res  = await fetch('/api/files');
+  const files = await res.json();
+  const cbzs  = files.filter(f => f.type === 'cbz');
+  const el    = document.getElementById('fileList');
+
+  if (!cbzs.length) { el.innerHTML = '<div class="no-files">No CBZ files found.<br>Build one first.</div>'; return; }
+
+  el.innerHTML = cbzs.map((f, i) => `
+    <div class="file-item" onclick="openFile(${i})" id="fi-${i}">
+      ${f.name}
+      <div class="file-size">${fmtSize(f.size)}</div>
+    </div>`).join('');
+
+  window._files = cbzs;
+}
+
+// ── Open file ────────────────────────────────────────────────────────────────
+async function openFile(idx) {
+  const f = window._files[idx];
+  curFile  = f.name;
+
+  document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`fi-${idx}`)?.classList.add('active');
+  document.getElementById('fileTitle').textContent = f.name;
+
+  showLoading(true);
+  const res = await fetch(`/api/reader/${encodeURIComponent(f.name)}/pages`);
+  pages     = await res.json();
+  showLoading(false);
+
+  if (!pages.length) { alert('No images found in this CBZ.'); return; }
+
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('imgWrap').style.display     = 'flex';
+  document.getElementById('controls').style.display    = 'flex';
+  document.getElementById('totalPages').textContent    = `/ ${pages.length}`;
+
+  current = 0;
+  applyMode();
+  render();
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function go(delta) {
+  if (mode === 'webtoon') return;
+  current = Math.max(0, Math.min(pages.length - 1, current + delta));
+  render();
+}
+
+function jumpTo(idx) {
+  current = Math.max(0, Math.min(pages.length - 1, idx));
+  render();
+}
+
+function render() {
+  if (mode === 'webtoon') { renderWebtoon(); return; }
+
+  const wrap = document.getElementById('imgWrap');
+  wrap.innerHTML = '';
+
+  const img = new Image();
+  img.src = `/api/reader/${encodeURIComponent(curFile)}/page/${pages[current]}`;
+  img.onclick = e => go(e.clientX > window.innerWidth / 2 ? 1 : -1);
+  img.ondragstart = () => false;
+  wrap.appendChild(img);
+
+  updateControls();
+}
+
+function renderWebtoon() {
+  const wrap = document.getElementById('imgWrap');
+  wrap.innerHTML = '<div class="spinner" style="margin:40px auto"></div>';
+
+  Promise.all(pages.map(p => new Promise(resolve => {
+    const img = new Image();
+    img.src = `/api/reader/${encodeURIComponent(curFile)}/page/${p}`;
+    img.onload = img.onerror = () => resolve(img);
+  }))).then(imgs => {
+    wrap.innerHTML = '';
+    imgs.forEach(img => { img.style.cssText = 'max-width:800px;width:100%;height:auto;display:block;margin:0 auto;'; wrap.appendChild(img); });
+  });
+
+  updateControls();
+}
+
+// ── Mode ─────────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  applyMode();
+  render();
+}
+
+function applyMode() {
+  const wrap = document.getElementById('imgWrap');
+  wrap.className = 'img-wrap' + (mode === 'fitH' ? ' fit-height' : mode === 'webtoon' ? ' webtoon' : '');
+  wrap.style.flexDirection = mode === 'webtoon' ? 'column' : 'row';
+
+  ['Normal', 'FitH', 'Webtoon'].forEach(m => {
+    document.getElementById('mode' + m)?.classList.toggle('on', mode === m.toLowerCase().replace('fith','fitH'));
+  });
+  document.getElementById('modeNormal').classList.toggle('on',  mode === 'normal');
+  document.getElementById('modeFitH').classList.toggle('on',   mode === 'fitH');
+  document.getElementById('modeWebtoon').classList.toggle('on', mode === 'webtoon');
+
+  // hide page controls in webtoon mode
+  const pageJump = document.querySelector('.page-jump');
+  const prev     = document.getElementById('prevBtn');
+  const next     = document.getElementById('nextBtn');
+  [prev, next, pageJump].forEach(el => el && (el.style.display = mode === 'webtoon' ? 'none' : ''));
+}
+
+function updateControls() {
+  document.getElementById('prevBtn').disabled = current === 0;
+  document.getElementById('nextBtn').disabled = current === pages.length - 1;
+  document.getElementById('pageInfo').textContent  = mode !== 'webtoon' ? `${current + 1} / ${pages.length}` : '';
+  document.getElementById('pageInput').value       = current + 1;
+}
+
+// ── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+});
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showLoading(v) { document.getElementById('loading').style.display = v ? 'flex' : 'none'; }
+function fmtSize(b) { return b > 1e6 ? (b/1e6).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'; }
+</script>
+</body>
+</html>

@@ -6,8 +6,10 @@ import { fileURLToPath } from 'url';
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { title: MANGA_TITLE, author: MANGA_AUTHOR, language: LANG } = cfg.manga;
 const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
-const { outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections, inputDir } = cfg.epub;
+const { outputDir: EPUB_OUT_DIR = 'epubs', outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections, inputDir } = cfg.epub;
 const INPUT_DIR = inputDir ?? SCRAPE_DIR;
+
+fs.mkdirSync(EPUB_OUT_DIR, { recursive: true });
 
 const WEBTOON_MODE = process.argv.includes('--webtoon');
 
@@ -154,12 +156,13 @@ ${navPoints.join('\n')}
   </navMap>
 </ncx>`);
 
-  if (fs.existsSync(epubName)) fs.unlinkSync(epubName);
+  const outPath = path.resolve(EPUB_OUT_DIR, epubName);
+  if (fs.existsSync(outPath)) fs.unlinkSync(outPath);
   console.log('📦 Packaging EPUB...');
-  execSync(`cd ${BUILD_DIR} && zip -0 -X "../${epubName}" mimetype`);
-  execSync(`cd ${BUILD_DIR} && zip -r "../${epubName}" META-INF OEBPS`);
+  execSync(`cd "${BUILD_DIR}" && zip -0 -X "${outPath}" mimetype`);
+  execSync(`cd "${BUILD_DIR}" && zip -r "${outPath}" META-INF OEBPS`);
   fs.rmSync(BUILD_DIR, { recursive: true });
-  console.log(`✅ Done! File: ./${epubName}`);
+  console.log(`✅ Done! File: ./${EPUB_OUT_DIR}/${epubName}`);
 }
 
 export function toEpub() {

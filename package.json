@@ -12,7 +12,8 @@
     "cbz": "node services/toCbz.js",
     "compress": "node services/compressImg.js",
     "start": "node run.js",
-    "ui": "node server/index.js"
+    "ui": "node server/index.js",
+    "ui:stop": "lsof -ti :3000 | xargs kill -9 2>/dev/null || true"
   },
   "keywords": [],
   "author": "",

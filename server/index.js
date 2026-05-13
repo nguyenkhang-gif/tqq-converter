@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -134,6 +134,65 @@ app.post('/api/stop', (_req, res) => {
     push({ t: 'status', status: 'stopped' });
   }
   res.json({ ok: true });
+});
+
+// ── Reader API ────────────────────────────────────────────────────────────────
+
+function getOutputDirs() {
+  const cfg = readCfg();
+  return {
+    epubs: path.join(ROOT, cfg.epub?.outputDir ?? 'epubs'),
+    cbzs:  path.join(ROOT, cfg.cbz?.outputDir  ?? 'cbzs'),
+  };
+}
+
+app.get('/api/files', (_req, res) => {
+  const { epubs, cbzs } = getOutputDirs();
+  const list = [];
+  for (const [type, dir] of [['epub', epubs], ['cbz', cbzs]]) {
+    if (!fs.existsSync(dir)) continue;
+    fs.readdirSync(dir)
+      .filter(f => f.endsWith(`.${type}`))
+      .forEach(f => {
+        const stat = fs.statSync(path.join(dir, f));
+        list.push({ name: f, type, size: stat.size, dir });
+      });
+  }
+  res.json(list);
+});
+
+// List image paths inside a CBZ
+app.get('/api/reader/:file/pages', (req, res) => {
+  const { cbzs } = getOutputDirs();
+  const filePath = path.join(cbzs, req.params.file);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+  try {
+    const out = execSync(`unzip -l "${filePath}"`).toString();
+    const pages = out.split('\n')
+      .filter(l => /\.(jpe?g|png|gif)/i.test(l))
+      .map(l => l.trim().split(/\s+/).slice(3).join(' '))
+      .filter(Boolean)
+      .sort();
+    res.json(pages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Stream a single image from a CBZ
+app.get('/api/reader/:file/page/*', (req, res) => {
+  const { cbzs } = getOutputDirs();
+  const filePath = path.join(cbzs, req.params.file);
+  const imgPath  = req.params[0];
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+
+  const ext = path.extname(imgPath).toLowerCase();
+  res.setHeader('Content-Type', ext === '.png' ? 'image/png' : ext === '.gif' ? 'image/gif' : 'image/jpeg');
+
+  const proc = spawn('unzip', ['-p', filePath, imgPath]);
+  proc.stdout.pipe(res);
+  proc.stderr.on('data', () => {});
+  proc.on('error', () => res.status(500).end());
 });
 
 const PORT = process.env.PORT || 3000;

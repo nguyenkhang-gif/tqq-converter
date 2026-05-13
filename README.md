@@ -6,20 +6,47 @@ Download manga images from truyenqqko.com and package them into EPUB or CBZ file
 
 ```bash
 npm install
-npm run init   # create output/ folder and blank data.html
+npm run init   # create output/, epubs/, cbzs/ folders and blank data.html
 ```
 
 ## Web UI (recommended)
 
 ```bash
-npm run ui     # → open http://localhost:3000
+npm run ui        # → open http://localhost:3000
+npm run ui:stop   # stop the server
 ```
 
-1. Paste the chapter list page URL into **Quick Start**
-2. Click **Fetch & Run All** — the UI will fetch the chapter list, download images, compress, and build EPUB automatically
-3. Watch real-time progress and logs
+### Quick Start (no config editing needed)
 
-The UI exposes all config fields (manga info, scrape timing, volumes/sections, compress quality) and lets you run any step individually.
+1. Paste the chapter list page URL into the **Quick Start** box
+2. Click **Fetch & Run All** — the UI will:
+   - Open the page in a headless browser and save the HTML
+   - Parse chapter URLs automatically
+   - Download all images
+   - Compress images
+   - Build EPUB into `epubs/`
+3. Watch real-time progress and live logs
+
+### Web UI features
+
+| Feature | Description |
+|---|---|
+| Quick Start | Enter URL → full pipeline in one click |
+| Config form | Edit all settings without touching `config.json` |
+| Chapter URLs | Click the **📋 N chapters** badge to view, edit, or paste new URLs |
+| Individual steps | Run Fetch / Chapters / Scrape / Compress / EPUB / CBZ separately |
+| Progress bar | Real-time chapter/image progress with step indicators |
+| Live log | Color-coded output streamed from the running process |
+| 📖 Reader | Open `cbzs/` files directly in the browser reader |
+
+### CBZ Reader (`/reader.html`)
+
+Click **📖 Reader** in the top-right of the UI. Features:
+- Lists all CBZ files in `cbzs/`
+- **Fit width** / **Fit height** / **Webtoon scroll** modes
+- Click left/right half of image to navigate pages
+- Arrow key navigation
+- Jump to page
 
 ---
 
@@ -30,31 +57,40 @@ All scripts live in `services/`. Run via npm scripts from the project root.
 ### Full pipeline
 
 ```bash
-npm run start       # scrape + build EPUB (reads config.json)
+npm run start         # scrape + build EPUB
 ```
 
 ### Step by step
 
 ```bash
-npm run chapters    # parse data.html → update config.json scrape.urls
-npm run scrape      # download images into output/
-npm run compress    # compress images → output-compress/
-npm run epub        # build EPUB from images
-npm run epub:webtoon # build EPUB in webtoon mode (images stacked vertically)
-npm run cbz         # build CBZ from images
+npm run chapters      # parse data.html → update config.json scrape.urls
+npm run scrape        # download images → output/
+npm run compress      # compress images → output-compress/
+npm run epub          # build EPUB → epubs/
+npm run epub:webtoon  # build EPUB in webtoon mode → epubs/
+npm run cbz           # build CBZ → cbzs/
 ```
 
-### Getting the chapter list
+### Getting the chapter list (terminal)
 
-For `npm run chapters` to work, you need `data.html` — either:
-- **Via UI**: the Fetch step handles this automatically using puppeteer
-- **Manual**: open the chapter list page in browser → Save As → `data.html` in project root
+Open the chapter list page in your browser → **Save As** → save as `data.html` in the project root, then run `npm run chapters`. The UI's **Fetch HTML** step does this automatically.
+
+---
+
+## Output folders
+
+| Folder | Contents |
+|---|---|
+| `output/` | Raw downloaded images (per chapter) |
+| `output-compress/` | Compressed images (sharp re-encode) |
+| `epubs/` | Final EPUB files |
+| `cbzs/` | Final CBZ files |
 
 ---
 
 ## Configuration — `config.json`
 
-All settings in one file, no code changes needed.
+All settings in one file. The Web UI config form mirrors every field below.
 
 ```json
 {
@@ -69,7 +105,7 @@ All settings in one file, no code changes needed.
     "referer": "https://...",
     "headless": true,                 // false = show browser window
     "from": 1,                        // start from chapter N (1-indexed)
-    "limit": null,                    // max chapters to download (null = all)
+    "limit": null,                    // max chapters (null = all)
     "concurrency": 1,                 // parallel chapters
     "imgSelector": ".page-chapter img",
     "scroll": { "distance": 400, "delay": 100 },
@@ -79,6 +115,7 @@ All settings in one file, no code changes needed.
     "urls": []                        // auto-filled by getChapters
   },
   "epub": {
+    "outputDir": "epubs",
     "outputFile": "manga.epub",
     "inputDir": null,                 // null = use scrape.outputDir
     "buildDir": ".epub-build",
@@ -87,6 +124,9 @@ All settings in one file, no code changes needed.
     //   { "name": "Vol 1.epub", "from": 1,  "to": 50  },
     //   { "name": "Vol 2.epub", "from": 51, "to": 100 }
     // ]
+  },
+  "cbz": {
+    "outputDir": "cbzs"
   },
   "compress": {
     "quality": 80,
@@ -104,5 +144,6 @@ All settings in one file, no code changes needed.
 | Start from chapter N | Set `"from": N` in scrape config |
 | Download chapters N–M | Set `"from": N, "limit": M-N+1` |
 | Split into volumes | Set `"sections"` array in epub config |
-| Run in background | Set `"headless": true` |
+| Run browser visibly | Set `"headless": false` |
 | Different website | Update `indexUrl`, `referer`, `imgSelector` |
+| Add chapters manually | Click **📋 N chapters** badge in UI → paste URLs |
