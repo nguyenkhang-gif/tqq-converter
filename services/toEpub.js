@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const { title: MANGA_TITLE, author: MANGA_AUTHOR, language: LANG } = cfg.manga;
-const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
+const { outputDir: SCRAPE_DIR } = cfg.scrape;
 const { outputDir: EPUB_OUT_DIR = 'epubs', outputFile: EPUB_NAME, buildDir: BUILD_DIR, sections, inputDir } = cfg.epub;
 const INPUT_DIR = inputDir ?? SCRAPE_DIR;
 
@@ -169,7 +169,7 @@ export function toEpub() {
   let allChapters = fs.readdirSync(INPUT_DIR)
     .filter(d => fs.statSync(path.join(INPUT_DIR, d)).isDirectory())
     .sort();
-  if (limit) allChapters = allChapters.slice(0, limit);
+
 
   if (allChapters.length === 0) {
     console.error(`❌ No chapters found in ./${INPUT_DIR}/`);

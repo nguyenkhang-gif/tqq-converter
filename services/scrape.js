@@ -4,6 +4,7 @@ import path from 'path';
 import https from 'https';
 import http from 'http';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const {
@@ -112,9 +113,10 @@ export async function scrape() {
         console.log(`   [ch${chNum}] ✅ Done (${imgUrls.length} images)`);
       }
     } catch (err) {
+      await browser?.close();
+      browser = null;
       if (attempt <= 3) {
         console.warn(`   [ch${chNum}] ⚠️  Error: ${err.message} — retrying in 5s...`);
-        await browser?.close();
         await sleep(5000);
         return scrapeChapter(url, i, attempt + 1);
       }
@@ -127,6 +129,19 @@ export async function scrape() {
   }
 
   await Promise.all(URLS.map((url, i) => pool(() => scrapeChapter(url, i))));
+
+  try {
+    if (process.platform === 'darwin') {
+      execSync('pkill -f "Google Chrome for Testing" 2>/dev/null || true');
+      execSync('pkill -f "Chromium" 2>/dev/null || true');
+    } else if (process.platform === 'linux') {
+      execSync('pkill -f chrome 2>/dev/null || true');
+      execSync('pkill -f chromium 2>/dev/null || true');
+    } else if (process.platform === 'win32') {
+      execSync('taskkill /F /IM chrome.exe /T 2>nul || true', { shell: true });
+    }
+  } catch {}
+
   console.log(`\n✅ Done! Images saved to ./${OUTPUT_DIR}/`);
 }
 

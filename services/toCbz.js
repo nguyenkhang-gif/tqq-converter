@@ -3,7 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-const { outputDir: SCRAPE_DIR, limit } = cfg.scrape;
+const { outputDir: SCRAPE_DIR } = cfg.scrape;
 const { outputFile: EPUB_NAME, sections, inputDir } = cfg.epub;
 const { outputDir: CBZ_OUT_DIR = 'cbzs' } = cfg.cbz ?? {};
 const INPUT_DIR = inputDir ?? SCRAPE_DIR;
@@ -50,7 +50,7 @@ function buildCbz(chapters, cbzName) {
 let allChapters = fs.readdirSync(INPUT_DIR)
   .filter(d => fs.statSync(path.join(INPUT_DIR, d)).isDirectory())
   .sort();
-if (limit) allChapters = allChapters.slice(0, limit);
+
 
 if (allChapters.length === 0) {
   console.error(`❌ No chapters found in ./${INPUT_DIR}/`);
