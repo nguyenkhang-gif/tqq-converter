@@ -50,6 +50,7 @@ export async function runJob(steps) {
 
   try {
     for (let i = 0; i < steps.length; i++) {
+      if (state.job.status !== 'running') break;
       const s = steps[i];
       state.job.step = i;
       state.job.progress = null;
@@ -57,6 +58,7 @@ export async function runJob(steps) {
 
       if (s === 'fetchHtml') {
         await runScript('fetchHtml.js', [cfg.manga.indexUrl]);
+        if (state.job.status !== 'running') break;
         await runScript('getChapters.js');
       } else if (s === 'chapters')   await runScript('getChapters.js');
       else if (s === 'scrape')       await runScript('scrape.js');
@@ -65,10 +67,14 @@ export async function runJob(steps) {
       else if (s === 'epub:webtoon') await runScript('toEpub.js', ['--webtoon']);
       else if (s === 'cbz')          await runScript('toCbz.js');
     }
-    state.job.status = 'done';
-    push({ t: 'status', status: 'done' });
+    if (state.job.status === 'running') {
+      state.job.status = 'done';
+      push({ t: 'status', status: 'done' });
+    }
   } catch (err) {
-    state.job.status = 'error';
-    push({ t: 'status', status: 'error', error: err.message });
+    if (state.job.status !== 'stopped') {
+      state.job.status = 'error';
+      push({ t: 'status', status: 'error', error: err.message });
+    }
   }
 }

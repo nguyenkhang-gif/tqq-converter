@@ -58,8 +58,14 @@
         );
         document.getElementById("scrape.headless").checked =
           c.scrape?.headless ?? true;
-        const urlCount = (c.scrape?.urls ?? []).length;
+        const urls = c.scrape?.urls ?? [];
+        const urlCount = urls.length;
         document.querySelector("#urlsBadge span").textContent = urlCount;
+        // refresh modal if open
+        if (!document.getElementById("urlModal").classList.contains("hidden")) {
+          document.getElementById("urlListArea").value = urls.join("\n");
+          updateUrlCount(urlCount);
+        }
 
         set("epub.outputFile", c.epub?.outputFile ?? "manga.epub");
         set("epub.inputDir", c.epub?.inputDir ?? "");
@@ -220,6 +226,8 @@
         es.onmessage = (e) => handleEvent(JSON.parse(e.data));
       }
 
+      let currentSteps = [];
+
       function handleEvent(d) {
         if (d.t === "log") {
           appendLog(d.text, d.level);
@@ -229,7 +237,8 @@
           markStep(d.i, "active");
           appendLog(`\n── ${STEP_LABELS[d.step] ?? d.step} ──\n`, "step");
         } else if (d.t === "status") {
-          setStatus(d.status, d.steps, d.step);
+          if (d.steps) currentSteps = d.steps;
+          setStatus(d.status, currentSteps, d.step);
         }
       }
 
@@ -255,7 +264,15 @@
         if (status === "done") {
           markStep(steps?.length - 1, "done");
           loadFiles();
-          notify("✅ Done!", "All steps completed successfully.");
+          if (steps?.some(s => s === "fetchHtml" || s === "chapters")) loadConfig();
+          const scrapeOnly = steps?.includes("scrape") && !steps?.includes("epub") && !steps?.includes("cbz");
+          if (scrapeOnly) {
+            appendLog("\n── ✅ Scrape xong! ──\n", "step");
+            appendLog("👉 Hãy cấu hình Volumes (sections) trong config, rồi bấm CBZ để đóng gói.\n", "info");
+            notify("✅ Scrape xong!", "Cấu hình volumes rồi bấm CBZ.");
+          } else {
+            notify("✅ Done!", "All steps completed successfully.");
+          }
         }
         if (status === "error") {
           markStep(stepIdx, "error");

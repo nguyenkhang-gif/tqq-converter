@@ -30,6 +30,7 @@ const defaultConfig = {
   },
   cbz: {
     outputDir: 'cbzs',
+    readerDir: null,
   },
   compress: {
     quality: 80,

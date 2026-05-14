@@ -4,20 +4,24 @@ import path from 'path';
 
 const cfg = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 const INPUT_DIR = cfg.scrape.outputDir;
-const { quality = 80, maxWidth = null, concurrency = 4, outputDir = 'output-compress' } = cfg.compress ?? {};
+const { quality = 80, maxWidth = null, concurrency = 4, outputDir = 'output-compress', webp = false } = cfg.compress ?? {};
 
 async function compressImage(srcPath, destPath) {
   const ext = path.extname(srcPath).toLowerCase();
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
 
+  if (ext === '.gif') {
+    fs.copyFileSync(srcPath, destPath);
+    return null;
+  }
+
   let pipeline = sharp(srcPath);
   if (maxWidth) pipeline = pipeline.resize({ width: maxWidth, withoutEnlargement: true });
 
-  if (ext === '.png') {
+  if (webp) {
+    await pipeline.webp({ quality }).toFile(destPath);
+  } else if (ext === '.png') {
     await pipeline.png({ quality, compressionLevel: 9 }).toFile(destPath);
-  } else if (ext === '.gif') {
-    fs.copyFileSync(srcPath, destPath);
-    return null;
   } else {
     await pipeline.jpeg({ quality, mozjpeg: true }).toFile(destPath);
   }
@@ -71,11 +75,15 @@ for (const chapter of chapters) {
     .filter(f => /\.(jpe?g|png|gif)$/i.test(f))
     .sort();
   for (const img of images) {
-    tasks.push({ src: path.join(INPUT_DIR, chapter, img), dest: path.join(outputDir, chapter, img) });
+    const destName = webp && !/\.gif$/i.test(img)
+      ? img.replace(/\.[^.]+$/, '.webp')
+      : img;
+    tasks.push({ src: path.join(INPUT_DIR, chapter, img), dest: path.join(outputDir, chapter, destName) });
   }
 }
 
-console.log(`🗜️  ${tasks.length} images across ${chapters.length} chapters (concurrency: ${concurrency})\n`);
+const modeLabel = webp ? 'WebP' : 'JPEG/PNG';
+console.log(`🗜️  ${tasks.length} images across ${chapters.length} chapters → ${modeLabel} q${quality} (concurrency: ${concurrency})\n`);
 
 let totalBefore = 0, totalAfter = 0, done = 0;
 const pool = createPool(concurrency);

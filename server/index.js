@@ -2,6 +2,7 @@ import express from 'express';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import qrcode from 'qrcode-terminal';
 
 import configRouter   from './routes/config.js';
 import pipelineRouter from './routes/pipeline.js';
@@ -37,7 +38,12 @@ const localOnly = process.argv.includes('--local');
 const host = localOnly ? 'localhost' : '0.0.0.0';
 
 app.listen(PORT, host, () => {
-  console.log(`\n🌐  Local:   http://localhost:${PORT}`);
-  if (!localOnly) console.log(`📱  Network: http://${getLocalIP()}:${PORT}`);
+  const localUrl   = `http://localhost:${PORT}`;
+  const networkUrl = `http://${getLocalIP()}:${PORT}`;
+  console.log(`\n🌐  Local:   ${localUrl}`);
+  if (!localOnly) {
+    console.log(`📱  Network: ${networkUrl}\n`);
+    qrcode.generate(networkUrl, { small: true });
+  }
   console.log();
 });

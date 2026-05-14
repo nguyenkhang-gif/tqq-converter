@@ -8,14 +8,17 @@ const router = Router();
 
 function getCbzDir() {
   const cfg = readCfg();
+  const readerDir = cfg.cbz?.readerDir;
+  if (readerDir && fs.existsSync(readerDir)) return readerDir;
   return path.join(ROOT, cfg.cbz?.outputDir ?? 'cbzs');
 }
 
 function getOutputDirs() {
   const cfg = readCfg();
+  const readerDir = cfg.cbz?.readerDir;
   return {
-    epubs: path.join(ROOT, cfg.epub?.outputDir  ?? 'epubs'),
-    cbzs:  path.join(ROOT, cfg.cbz?.outputDir   ?? 'cbzs'),
+    epubs: path.join(ROOT, cfg.epub?.outputDir ?? 'epubs'),
+    cbzs:  (readerDir && fs.existsSync(readerDir)) ? readerDir : path.join(ROOT, cfg.cbz?.outputDir ?? 'cbzs'),
   };
 }
 
