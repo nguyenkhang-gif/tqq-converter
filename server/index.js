@@ -10,6 +10,7 @@ import readerRouter   from './routes/reader.js';
 import epubRouter     from './routes/epub.js';
 import epubTextRouter from './routes/epubText.js';
 import chaptersRouter from './routes/chapters.js';
+import historyRouter  from './routes/history.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,6 +23,7 @@ app.use('/api',          pipelineRouter);   // /api/status, /api/log, /api/run, 
 app.use('/api',          readerRouter);     // /api/files, /api/reader/...
 app.use('/api/epub',     epubRouter);       // /api/epub/:file/pages, /api/epub/:file/image/*
 app.use('/api/epub-text', epubTextRouter); // /api/epub-text/:file/toc, /chapter/:i, /asset/*
+app.use('/api/history',  historyRouter);  // /api/history, /api/history/:file
 app.use('/api/chapters', chaptersRouter);
 
 function getLocalIP() {

@@ -163,8 +163,9 @@ async function loadVolume(file) {
   populateSelect();
   showChapterList();
 
-  // auto-load first chapter
-  loadChapter(0);
+  // restore last position from history, fallback to 0
+  const hist = await fetch(`/api/history/${encodeURIComponent(file.name)}`).then(r => r.json()).catch(() => null);
+  loadChapter(hist?.lastChapter ?? 0);
 }
 
 // ── load a single chapter ─────────────────────────────────────────────────
@@ -179,6 +180,17 @@ function loadChapter(idx) {
   syncSelect();
   updateChapNav();
   renderViewer();
+
+  fetch(`/api/history/${encodeURIComponent(currentFile.name)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: currentFile.type,
+      lastChapter: idx,
+      lastPage: 0,
+      totalChapters: allChapters.length,
+    }),
+  }).catch(() => {});
 }
 
 function pageUrl(pg) {

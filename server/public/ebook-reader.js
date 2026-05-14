@@ -59,7 +59,8 @@ async function openBook(file) {
   totalChapters = toc.length;
   buildToc(toc);
 
-  const startIndex = parseInt(localStorage.getItem(`ebook-pos-${file}`) ?? '0');
+  const hist = await fetch(`/api/history/${encodeURIComponent(file)}`).then(r => r.json()).catch(() => null);
+  const startIndex = hist?.lastChapter ?? 0;
   await loadChapter(Math.min(startIndex, totalChapters - 1));
 }
 
