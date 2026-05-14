@@ -15,7 +15,9 @@
     "ui": "node server/index.js",
     "ui:local": "node server/index.js --local",
     "ui:stop": "lsof -ti :3000 | xargs kill -9 2>/dev/null || true",
-    "export": "node export-cbz.js"
+    "export": "node export-cbz.js",
+    "tunnel": "echo '🚇 Tunneling port '${PORT:-3000}'...' && cloudflared tunnel --url http://localhost:${PORT:-3000}",
+    "tunnel:stop": "pkill cloudflared 2>/dev/null && echo '✅ Tunnel stopped' || echo 'No tunnel running'"
   },
   "keywords": [],
   "author": "",
