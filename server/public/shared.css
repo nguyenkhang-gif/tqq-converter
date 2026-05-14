@@ -1,0 +1,42 @@
+:root {
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface2: #1f1f1f;
+  --border: #2a2a2a;
+  --accent: #7c3aed;
+  --acc-h: #6d28d9;
+  --success: #16a34a;
+  --error: #dc2626;
+  --warn: #d97706;
+  --info: #2563eb;
+  --text: #e5e5e5;
+  --muted: #737373;
+  --r: 8px;
+  --font: system-ui, -apple-system, sans-serif;
+  --mono: "SF Mono", "Fira Code", monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 14px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner {
+  border-radius: 50%;
+  border-style: solid;
+  border-color: currentColor;
+  border-top-color: transparent;
+  animation: spin 0.65s linear infinite;
+}
