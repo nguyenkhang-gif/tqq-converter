@@ -104,7 +104,7 @@ body::before {
 .chapter-content {
   max-width: 720px;
   margin: 0 auto;
-  padding: 40px 24px 80px;
+  padding: 40px 24px 40px;
   font-size: var(--font-size);
   line-height: var(--line-height);
   color: var(--text);
@@ -146,6 +146,6 @@ body::before {
   .sidebar { position: absolute; height: 100%; box-shadow: 4px 0 24px #0009; }
   .overlay { display: none; position: fixed; inset: 0; z-index: 15; background: #0007; }
   .overlay.show { display: block; }
-  .chapter-content { padding: 24px 16px 60px; }
+  .chapter-content { padding: 24px 16px 40px; }
   .font-size-label { display: none; }
 }

@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { saveCfg } from '../lib/config.js';
+import fs from 'fs';
+import path from 'path';
+import { ROOT, readCfg, saveCfg } from '../lib/config.js';
 import { state, bus, push, runJob } from '../lib/job.js';
 
 const router = Router();
@@ -44,6 +46,46 @@ router.post('/stop', (_req, res) => {
     push({ t: 'status', status: 'stopped' });
   }
   res.json({ ok: true });
+});
+
+router.get('/output-stats', (_req, res) => {
+  const cfg = readCfg();
+  const dirs = {
+    output: cfg.scrape?.outputDir ?? 'output',
+    compress: cfg.compress?.outputDir ?? 'output-compress',
+  };
+  const stats = {};
+  for (const [key, d] of Object.entries(dirs)) {
+    const full = path.join(ROOT, d);
+    if (!fs.existsSync(full)) { stats[key] = { chapters: 0, images: 0 }; continue; }
+    const chapters = fs.readdirSync(full).filter(n => fs.statSync(path.join(full, n)).isDirectory());
+    let images = 0;
+    for (const ch of chapters) {
+      const chPath = path.join(full, ch);
+      images += fs.readdirSync(chPath).filter(f => /\.(jpe?g|png|gif|webp)$/i.test(f)).length;
+    }
+    stats[key] = { chapters: chapters.length, images };
+  }
+  res.json(stats);
+});
+
+router.post('/cleanup', (_req, res) => {
+  if (state.job?.status === 'running') return res.status(409).json({ error: 'Cannot clean up while a job is running' });
+  const cfg = readCfg();
+  const dirs = [
+    cfg.scrape?.outputDir ?? 'output',
+    cfg.compress?.outputDir ?? 'output-compress',
+  ];
+  const removed = [];
+  for (const d of dirs) {
+    const full = path.join(ROOT, d);
+    if (fs.existsSync(full)) {
+      fs.rmSync(full, { recursive: true, force: true });
+      fs.mkdirSync(full);
+      removed.push(d);
+    }
+  }
+  res.json({ ok: true, removed });
 });
 
 export default router;

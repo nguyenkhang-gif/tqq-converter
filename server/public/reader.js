@@ -26,6 +26,16 @@ async function init() {
 
   files = allFiles; // both cbz and epub
   showFileList();
+
+  // restore from hash: #<filename>/<chapterIndex>
+  if (location.hash) {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const slash = hash.lastIndexOf('/');
+    const fileName = slash >= 0 ? hash.slice(0, slash) : hash;
+    const chapIdx  = slash >= 0 ? parseInt(hash.slice(slash + 1), 10) : 0;
+    const file = files.find(f => f.name === fileName);
+    if (file) await loadVolume(file, isNaN(chapIdx) ? 0 : chapIdx);
+  }
 }
 
 // ── sidebar: volume list ──────────────────────────────────────────────────
@@ -131,7 +141,7 @@ function syncSelect() {
 }
 
 // ── load volume (fetch all pages, extract chapters, show chapter list) ────
-async function loadVolume(file) {
+async function loadVolume(file, forceChapter = null) {
   currentFile = file;
   currentChap = -1;
   pages = [];
@@ -163,9 +173,13 @@ async function loadVolume(file) {
   populateSelect();
   showChapterList();
 
-  // restore last position from history, fallback to 0
-  const hist = await fetch(`/api/history/${encodeURIComponent(file.name)}`).then(r => r.json()).catch(() => null);
-  loadChapter(hist?.lastChapter ?? 0);
+  // restore from hash override, then history, then 0
+  let startChap = forceChapter;
+  if (startChap === null) {
+    const hist = await fetch(`/api/history/${encodeURIComponent(file.name)}`).then(r => r.json()).catch(() => null);
+    startChap = hist?.lastChapter ?? 0;
+  }
+  loadChapter(Math.min(startChap, allChapters.length - 1));
 }
 
 // ── load a single chapter ─────────────────────────────────────────────────
@@ -238,6 +252,8 @@ function renderVert() {
     const wrap = document.createElement('div');
     wrap.className = 'page-wrap';
     wrap.style.height = '1400px';
+    if (i === 0) wrap.style.marginTop = '30px';
+    if (i === pages.length - 1) wrap.style.marginBottom = '90px';
 
     const img = new Image();
     img.className = 'page-img';
@@ -370,6 +386,16 @@ viewer.addEventListener('touchend', e => {
   if (mode !== 'horiz') return;
   const dx = touchStartX - e.changedTouches[0].clientX;
   if (Math.abs(dx) > 40) navigate(dx > 0 ? 1 : -1);
+}, { passive: true });
+
+// ── hide nav on scroll down (mobile only) ────────────────────────────────
+let lastScrollY = 0;
+const toolbar = document.querySelector('.toolbar');
+viewer.addEventListener('scroll', () => {
+  if (window.innerWidth > 640) return;
+  const y = viewer.scrollTop;
+  toolbar.classList.toggle('hidden-nav', y > lastScrollY && y > 60);
+  lastScrollY = y;
 }, { passive: true });
 
 // ── mobile sidebar ────────────────────────────────────────────────────────

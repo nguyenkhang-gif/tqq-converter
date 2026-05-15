@@ -219,6 +219,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .actions-row { display: flex; gap: 8px; margin-top: 8px; }
 .actions-row button { flex: 1; }
 .save-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+.stat-badge { font-size: 11px; font-weight: 500; color: var(--accent); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1px 7px; margin-left: 4px; vertical-align: middle; }
 
 /* ── steps ── */
 .steps { display: flex; gap: 4px; flex-wrap: wrap; }

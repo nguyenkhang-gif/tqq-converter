@@ -25,6 +25,7 @@
         await loadConfig();
         connectSSE();
         loadFiles();
+        loadOutputStats();
         if (Notification.permission === "default") Notification.requestPermission();
       })();
 
@@ -213,6 +214,31 @@
         await fetch("/api/stop", { method: "POST" });
       }
 
+      async function loadOutputStats() {
+        try {
+          const res = await fetch("/api/output-stats");
+          const { output, compress } = await res.json();
+          const fmt = s => s.images ? `${s.chapters} ch · ${s.images} ảnh` : "";
+          const o = document.getElementById("statOutput");
+          const c = document.getElementById("statCompress");
+          if (o) o.textContent = fmt(output);
+          if (c) c.textContent = fmt(compress);
+        } catch {}
+      }
+
+      async function cleanupOutput(btn) {
+        if (!confirm("Xoá toàn bộ ảnh trong output/ và output-compress/?\nThao tác này không thể hoàn tác.")) return;
+        const res = await fetch("/api/cleanup", { method: "POST" });
+        if (!res.ok) {
+          const { error } = await res.json();
+          alert(error);
+          return;
+        }
+        const { removed } = await res.json();
+        loadOutputStats();
+        flashBtn(btn, removed.length ? `✓ Đã xoá: ${removed.join(", ")}` : "✓ Không có gì để xoá");
+      }
+
       // ── SSE ───────────────────────────────────────────────────────────────────────
       function connectSSE() {
         if (es) es.close();
@@ -264,6 +290,7 @@
         if (status === "done") {
           markStep(steps?.length - 1, "done");
           loadFiles();
+          loadOutputStats();
           if (steps?.some(s => s === "fetchHtml" || s === "chapters")) loadConfig();
           const scrapeOnly = steps?.includes("scrape") && !steps?.includes("epub") && !steps?.includes("cbz");
           if (scrapeOnly) {

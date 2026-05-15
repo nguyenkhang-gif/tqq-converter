@@ -109,6 +109,8 @@ async function loadChapter(index) {
     const content = document.createElement('div');
     content.className = 'chapter-content';
     content.innerHTML = html;
+    const lastEl = content.lastElementChild;
+    if (lastEl) lastEl.style.marginBottom = '40px';
     viewer.innerHTML = '';
     viewer.appendChild(content);
     viewer.scrollTop = 0;

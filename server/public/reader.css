@@ -55,7 +55,7 @@ body::before {
 .side-empty { padding: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
 /* main */
-.main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative; }
 
 /* toolbar */
 .toolbar {
@@ -152,8 +152,18 @@ body::before {
   .overlay { display: none; position: fixed; inset: 0; z-index: 15; background: #0007; }
   .overlay.show { display: block; }
 
-  /* tighter toolbar on mobile */
-  .toolbar { padding: 5px 8px; gap: 4px; }
+  /* tighter toolbar on mobile — float above viewer so it doesn't affect layout */
+  .toolbar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+    padding: 5px 8px; gap: 4px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .toolbar.hidden-nav {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .viewer { padding-top: 44px; }
   .btn { padding: 6px 8px; }
   .icon-btn { font-size: 18px; padding: 5px 10px; }
   .chap-select { font-size: 12px; padding: 6px 6px; }

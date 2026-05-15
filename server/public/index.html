@@ -91,7 +91,7 @@
           </details>
 
           <details>
-            <summary>🔍 Scrape</summary>
+            <summary>🔍 Scrape <span id="statOutput" class="stat-badge"></span></summary>
             <div class="detail-body">
               <div class="row2">
                 <div class="field">
@@ -206,7 +206,7 @@
           </details>
 
           <details>
-            <summary>🗜️ Compress</summary>
+            <summary>🗜️ Compress <span id="statCompress" class="stat-badge"></span></summary>
             <div class="detail-body">
               <div class="field">
                 <label>JPEG/PNG quality: <span id="qualityVal">80</span></label>
@@ -300,6 +300,11 @@
             </button>
             <button class="btn-danger" id="stopBtn" onclick="stop()" disabled>
               ⏹ Stop
+            </button>
+          </div>
+          <div class="actions-row" style="margin-top:8px">
+            <button class="btn-secondary" onclick="cleanupOutput(this)" style="width:100%;color:var(--muted)">
+              🗑 Clean Up Output
             </button>
           </div>
         </div>
