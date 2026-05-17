@@ -35,7 +35,7 @@ function getLocalIP() {
   return 'localhost';
 }
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const localOnly = process.argv.includes('--local');
 const host = localOnly ? 'localhost' : '0.0.0.0';
 

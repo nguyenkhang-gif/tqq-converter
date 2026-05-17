@@ -1,6 +1,6 @@
 {
   "name": "tqq",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -14,9 +14,9 @@
     "start": "node run.js",
     "ui": "node server/index.js",
     "ui:local": "node server/index.js --local",
-    "ui:stop": "lsof -ti :3000 | xargs kill -9 2>/dev/null || true",
+    "ui:stop": "lsof -ti :3001 | xargs kill -9 2>/dev/null || true",
     "export": "node export-cbz.js",
-    "tunnel": "echo '🚇 Tunneling port '${PORT:-3000}'...' && cloudflared tunnel --url http://localhost:${PORT:-3000}",
+    "tunnel": "echo '🚇 Tunneling port '${PORT:-3001}'...' && cloudflared tunnel --url http://localhost:${PORT:-3001}",
     "tunnel:stop": "pkill cloudflared 2>/dev/null && echo '✅ Tunnel stopped' || echo 'No tunnel running'"
   },
   "keywords": [],

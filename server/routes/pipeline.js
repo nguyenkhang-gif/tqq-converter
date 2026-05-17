@@ -39,6 +39,11 @@ router.post('/run', (req, res) => {
   runJob(steps); // non-blocking — progress streams via SSE
 });
 
+router.delete('/log', (_req, res) => {
+  if (state.job) state.job.logs = [];
+  res.json({ ok: true });
+});
+
 router.post('/stop', (_req, res) => {
   if (state.child) { state.child.kill('SIGTERM'); state.child = null; }
   if (state.job?.status === 'running') {

@@ -287,6 +287,10 @@
           ? `<div class="spinner"></div> ${labels[status]}`
           : (labels[status] ?? status);
 
+        const icons = { running: "⏳", done: "✅", error: "❌", stopped: "⏹️", idle: "" };
+        const icon = icons[status] ?? "";
+        document.title = icon ? `${icon} ${labels[status] ?? status} — Manga Converter` : "Manga Converter";
+
         if (status === "done") {
           markStep(steps?.length - 1, "done");
           loadFiles();
@@ -331,6 +335,7 @@
         document.getElementById("progressFill").style.width = pct + "%";
         document.getElementById("progressText").textContent =
           total > 0 ? `${done} / ${total}  (${pct}%)` : "";
+        if (total > 0) document.title = `⏳ ${pct}% — Manga Converter`;
       }
 
       // ── Log ───────────────────────────────────────────────────────────────────────
@@ -372,6 +377,7 @@
         setProgress(0, 0);
         document.getElementById("steps").innerHTML =
           '<span class="step-pill">—</span>';
+        fetch("/api/log", { method: "DELETE" });
       }
 
       // ── Tabs ─────────────────────────────────────────────────────────────────────
